@@ -1408,6 +1408,7 @@ void initServerConfig(void) {
     pthread_mutex_init(&server.unixtime_mutex,NULL);
 
     getRandomHexChars(server.runid,CONFIG_RUN_ID_SIZE);
+    // 设置默认值
     server.runid[CONFIG_RUN_ID_SIZE] = '\0';
     changeReplicationId();
     clearReplicationId2();
@@ -1518,6 +1519,7 @@ void initServerConfig(void) {
     atomicSet(server.lruclock,lruclock);
     resetServerSaveParams();
 
+    // 设置 rdb save 保存参数
     appendServerSaveParams(60*60,1);  /* save after 1 hour and 1 change */
     appendServerSaveParams(300,100);  /* save after 5 minutes and 100 changes */
     appendServerSaveParams(60,10000); /* save after 1 minute and 10000 changes */
@@ -1556,7 +1558,7 @@ void initServerConfig(void) {
     server.repl_backlog_time_limit = CONFIG_DEFAULT_REPL_BACKLOG_TIME_LIMIT;
     server.repl_no_slaves_since = time(NULL);
 
-    /* Client output buffer limits */
+    /* Client output buffer limits 客户端输出缓冲区的限制 */
     for (j = 0; j < CLIENT_TYPE_OBUF_COUNT; j++)
         server.client_obuf_limits[j] = clientBufferLimitsDefaults[j];
 
@@ -1566,9 +1568,14 @@ void initServerConfig(void) {
     R_NegInf = -1.0/R_Zero;
     R_Nan = R_Zero/R_Zero;
 
-    /* Command table -- we initiialize it here as it is part of the
+    /*
+     * Command table -- we initiialize it here as it is part of the
      * initial configuration, since command names may be changed via
-     * redis.conf using the rename-command directive. */
+     * redis.conf using the rename-command directive.
+     *
+     * 命令表-我们可以在这里初始化它，因为它是初始配置的一部分，
+     * 命令名称可以通过 redis.conf 使用rename-command 指令修改
+     */
     server.commands = dictCreate(&commandTableDictType,NULL);
     server.orig_commands = dictCreate(&commandTableDictType,NULL);
     populateCommandTable();
@@ -1585,11 +1592,13 @@ void initServerConfig(void) {
     server.pexpireCommand = lookupCommandByCString("pexpire");
     server.xclaimCommand = lookupCommandByCString("xclaim");
 
-    /* Slow log */
+    /* Slow log 和日志相关的配置 */
+    // slow log 时间限制（纪录）默认值是 10000
     server.slowlog_log_slower_than = CONFIG_DEFAULT_SLOWLOG_LOG_SLOWER_THAN;
+    // showlog 最大长度，默认值是 128
     server.slowlog_max_len = CONFIG_DEFAULT_SLOWLOG_MAX_LEN;
 
-    /* Latency monitor */
+    /* Latency monitor 延迟监控 */
     server.latency_monitor_threshold = CONFIG_DEFAULT_LATENCY_MONITOR_THRESHOLD;
 
     /* Debugging */
@@ -2059,8 +2068,10 @@ void initServer(void) {
     server.initial_memory_usage = zmalloc_used_memory();
 }
 
-/* Populates the Redis Command Table starting from the hard coded list
- * we have on top of redis.c file. */
+/*
+ * Populates the Redis Command Table starting from the hard coded list
+ * we have on top of redis.c file.
+ */
 void populateCommandTable(void) {
     int j;
     int numcommands = sizeof(redisCommandTable)/sizeof(struct redisCommand);
@@ -3871,7 +3882,7 @@ int main(int argc, char **argv) {
     getRandomHexChars(hashseed,sizeof(hashseed));
     dictSetHashFunctionSeed((uint8_t*)hashseed);
     server.sentinel_mode = checkForSentinelMode(argc,argv);
-    // 设定默认的参数值，并读取配置文件 redis.conf。
+    // 设定默认的参数值
     initServerConfig();
     moduleInitModulesSystem();
 
@@ -3922,9 +3933,9 @@ int main(int argc, char **argv) {
         /* First argument is the config file name? */
         if (argv[j][0] != '-' || argv[j][1] != '-') {
             configfile = argv[j];
+            // 获取文件的绝对路径
             server.configfile = getAbsolutePath(configfile);
-            /* Replace the config file in server.exec_argv with
-             * its absoulte path. */
+            /* 将 server.exec_argv 中的配置文件替换成他的绝对路径  */
             zfree(server.exec_argv[j]);
             server.exec_argv[j] = zstrdup(server.configfile);
             j++;
@@ -3959,7 +3970,9 @@ int main(int argc, char **argv) {
                 "Sentinel needs config file on disk to save state.  Exiting...");
             exit(1);
         }
+        // 重置 save 参数，以 redis.conf 文件中为准
         resetServerSaveParams();
+        // 加载配置文件
         loadServerConfig(configfile,options);
         sdsfree(options);
     }

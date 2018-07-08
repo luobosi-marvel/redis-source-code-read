@@ -1,33 +1,3 @@
-/* Configuration file parsing and CONFIG GET/SET commands implementation.
- *
- * Copyright (c) 2009-2012, Salvatore Sanfilippo <antirez at gmail dot com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *   * Redistributions of source code must retain the above copyright notice,
- *     this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *   * Neither the name of Redis nor the names of its contributors may be used
- *     to endorse or promote products derived from this software without
- *     specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
 #include "server.h"
 #include "cluster.h"
 
@@ -35,7 +5,8 @@
 #include <sys/stat.h>
 
 /*-----------------------------------------------------------------------------
- * Config file name-value maps.
+ * Config file name-value maps.这里保存了 redis.conf 的配置信息
+ * todo: 配置文件 key-value 映射
  *----------------------------------------------------------------------------*/
 
 typedef struct configEnum {
@@ -142,6 +113,11 @@ int yesnotoi(char *s) {
     else return -1;
 }
 
+/**
+ * todo：设置 rdb save 保存参数
+ * @param seconds   秒
+ * @param changes   改变次数
+ */
 void appendServerSaveParams(time_t seconds, int changes) {
     server.saveparams = zrealloc(server.saveparams,sizeof(struct saveparam)*(server.saveparamslen+1));
     server.saveparams[server.saveparamslen].seconds = seconds;
@@ -149,6 +125,9 @@ void appendServerSaveParams(time_t seconds, int changes) {
     server.saveparamslen++;
 }
 
+/**
+ * 重置 redis save 命令
+ */
 void resetServerSaveParams(void) {
     zfree(server.saveparams);
     server.saveparams = NULL;
@@ -169,22 +148,42 @@ void queueLoadModule(sds path, sds *argv, int argc) {
     listAddNodeTail(server.loadmodule_queue,loadmod);
 }
 
+/**
+ * 加载 redis.conf 配置文件
+ *
+ * @param config redis.conf 配置文件
+ */
 void loadServerConfigFromString(char *config) {
     char *err = NULL;
     int linenum = 0, totlines, i;
     int slaveof_linenum = 0;
     sds *lines;
 
+    // 根据 \n 换行符切割字符串，存到 lines 数组里面 totlines: 表示多少行
     lines = sdssplitlen(config,strlen(config),"\n",1,&totlines);
-
+    // 循环遍历每一行字符串
     for (i = 0; i < totlines; i++) {
+        // sds 指针数组
         sds *argv;
+        // argv 存储元素的个数
         int argc;
 
         linenum = i+1;
+        // 移除 sds 字符串中的 \t\r\n 字符，方便后面解析参数
         lines[i] = sdstrim(lines[i]," \t\r\n");
 
-        /* Skip comments and blank lines */
+        /*
+         * todo：跳过配置文件中以 # 或者以空格开头的配置
+         * 这里就会有个坑，有的人配置文件的时候不小心多了个空格，
+         * 这样就会导致自己配置的内容不会生效
+         *
+         * 为什么起始字符不能有空格呢？
+         * 因为后面解析数据的时候是根据空格解析的
+         *
+         * 注意：lines 只是一个指针数组，为什么可以 lines[i][0]
+         * 因为 lines 里面存的都是sds 结构，然后 sds 就是一个字符数组
+         * lines[i][0]: 表示第i个 sds 中下标为0的字符
+         */
         if (lines[i][0] == '#' || lines[i][0] == '\0') continue;
 
         /* Split into arguments */
@@ -201,7 +200,7 @@ void loadServerConfigFromString(char *config) {
         }
         sdstolower(argv[0]);
 
-        /* Execute config directives */
+        /* Execute config directives 执行配置指令 */
         if (!strcasecmp(argv[0],"timeout") && argc == 2) {
             server.maxidletime = atoi(argv[1]);
             if (server.maxidletime < 0) {
@@ -681,11 +680,11 @@ void loadServerConfigFromString(char *config) {
         } else if (!strcasecmp(argv[0],"client-output-buffer-limit") &&
                    argc == 5)
         {
-            int class = getClientTypeByName(argv[1]);
+            int marvel = getClientTypeByName(argv[1]);
             unsigned long long hard, soft;
             int soft_seconds;
 
-            if (class == -1 || class == CLIENT_TYPE_MASTER) {
+            if (marvel == -1 || marvel == CLIENT_TYPE_MASTER) {
                 err = "Unrecognized client limit class: the user specified "
                 "an invalid one, or 'master' which has no buffer limits.";
                 goto loaderr;
@@ -697,9 +696,9 @@ void loadServerConfigFromString(char *config) {
                 err = "Negative number of seconds in soft limit is invalid";
                 goto loaderr;
             }
-            server.client_obuf_limits[class].hard_limit_bytes = hard;
-            server.client_obuf_limits[class].soft_limit_bytes = soft;
-            server.client_obuf_limits[class].soft_limit_seconds = soft_seconds;
+            server.client_obuf_limits[marvel].hard_limit_bytes = hard;
+            server.client_obuf_limits[marvel].soft_limit_bytes = soft;
+            server.client_obuf_limits[marvel].soft_limit_seconds = soft_seconds;
         } else if (!strcasecmp(argv[0],"stop-writes-on-bgsave-error") &&
                    argc == 2) {
             if ((server.stop_writes_on_bgsave_err = yesnotoi(argv[1])) == -1) {
@@ -770,10 +769,11 @@ void loadServerConfigFromString(char *config) {
         err = "slaveof directive not allowed in cluster mode";
         goto loaderr;
     }
-
+    // 释放 lines，totlines 的内存
     sdsfreesplitres(lines,totlines);
     return;
 
+    // 打印出错误信息
 loaderr:
     fprintf(stderr, "\n*** FATAL CONFIG FILE ERROR ***\n");
     fprintf(stderr, "Reading the configuration file, at line %d\n", linenum);
@@ -782,13 +782,17 @@ loaderr:
     exit(1);
 }
 
-/* Load the server configuration from the specified filename.
+/*
+ * todo: 加载 redis.conf 配置文件
+ *
+ * Load the server configuration from the specified filename.
  * The function appends the additional configuration directives stored
  * in the 'options' string to the config file before loading.
  *
  * Both filename and options can be NULL, in such a case are considered
  * empty. This way loadServerConfig can be used to just load a file or
- * just load a string. */
+ * just load a string.
+ */
 void loadServerConfig(char *filename, char *options) {
     sds config = sdsempty();
     char buf[CONFIG_MAX_LINE+1];
@@ -815,6 +819,7 @@ void loadServerConfig(char *filename, char *options) {
         config = sdscat(config,"\n");
         config = sdscat(config,options);
     }
+    // 这里才是真正的加载 redis.conf 文件
     loadServerConfigFromString(config);
     sdsfree(config);
 }
@@ -976,8 +981,8 @@ void configSetCommand(client *c) {
             long val;
 
             if ((j % 4) == 0) {
-                int class = getClientTypeByName(v[j]);
-                if (class == -1 || class == CLIENT_TYPE_MASTER) {
+                int marvel = getClientTypeByName(v[j]);
+                if (marvel == -1 || marvel == CLIENT_TYPE_MASTER) {
                     sdsfreesplitres(v,vlen);
                     goto badfmt;
                 }
@@ -991,18 +996,18 @@ void configSetCommand(client *c) {
         }
         /* Finally set the new config */
         for (j = 0; j < vlen; j += 4) {
-            int class;
+            int marvel;
             unsigned long long hard, soft;
             int soft_seconds;
 
-            class = getClientTypeByName(v[j]);
+            marvel = getClientTypeByName(v[j]);
             hard = strtoll(v[j+1],NULL,10);
             soft = strtoll(v[j+2],NULL,10);
             soft_seconds = strtoll(v[j+3],NULL,10);
 
-            server.client_obuf_limits[class].hard_limit_bytes = hard;
-            server.client_obuf_limits[class].soft_limit_bytes = soft;
-            server.client_obuf_limits[class].soft_limit_seconds = soft_seconds;
+            server.client_obuf_limits[marvel].hard_limit_bytes = hard;
+            server.client_obuf_limits[marvel].soft_limit_bytes = soft;
+            server.client_obuf_limits[marvel].soft_limit_seconds = soft_seconds;
         }
         sdsfreesplitres(v,vlen);
     } config_set_special_field("notify-keyspace-events") {
@@ -1509,7 +1514,7 @@ dictType optionSetDictType = {
     NULL                        /* val destructor */
 };
 
-/* The config rewrite state. */
+/* The config rewrite state. 配置重写状态 */
 struct rewriteConfigState {
     dict *option_to_line; /* Option -> list of config file lines map */
     dict *rewritten;      /* Dictionary of already processed options */

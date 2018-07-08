@@ -215,16 +215,20 @@ static inline void sdssetalloc(sds s, size_t newlen) {
     }
 }
 
+
 sds sdsnewlen(const void *init, size_t initlen);
 sds sdsnew(const char *init);
 sds sdsempty(void);
 sds sdsdup(const sds s);
 void sdsfree(sds s);
+// 用空字符将 SDS 扩展到指定长度
 sds sdsgrowzero(sds s, size_t len);
 sds sdscatlen(sds s, const void *t, size_t len);
 sds sdscat(sds s, const char *t);
 sds sdscatsds(sds s, const sds t);
 sds sdscpylen(sds s, const char *t, size_t len);
+
+// 将给定的 c 字符串复制到 SDS 里面，覆盖 SDS原有的字符串
 sds sdscpy(sds s, const char *t);
 
 sds sdscatvprintf(sds s, const char *fmt, va_list ap);
@@ -236,10 +240,13 @@ sds sdscatprintf(sds s, const char *fmt, ...);
 #endif
 
 sds sdscatfmt(sds s, char const *fmt, ...);
+// 接收一个 SDS 和一个 c 字符串作为参数，从 SDS 中移除所有在 C 字符串中出现过的字符
 sds sdstrim(sds s, const char *cset);
+// 保留 SDS 给定区间内的数据，不在区间内的数据将会被覆盖或清除
 void sdsrange(sds s, ssize_t start, ssize_t end);
 void sdsupdatelen(sds s);
 void sdsclear(sds s);
+// 比较两个字符串是否相等
 int sdscmp(const sds s1, const sds s2);
 sds *sdssplitlen(const char *s, ssize_t len, const char *sep, int seplen, int *count);
 void sdsfreesplitres(sds *tokens, int count);
