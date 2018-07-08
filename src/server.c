@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2009-2016, Salvatore Sanfilippo <antirez at gmail dot com>
  * All rights reserved.
  *
@@ -1395,6 +1395,11 @@ void createSharedObjects(void) {
     shared.maxstring = sdsnew("maxstring");
 }
 
+/**
+ *用于设置默认值，并读取配置文件 redis.conf，若用户配置某个参数，则用该参数值替换默认值
+ * 
+ * [initServerConfig description]
+ */
 void initServerConfig(void) {
     int j;
 
@@ -1875,6 +1880,11 @@ void resetServerStats(void) {
     server.aof_delayed_fsync = 0;
 }
 
+/**
+ * todo: 这里是对 redis 服务器进行初始化
+ * 
+ * [initServer description]
+ */
 void initServer(void) {
     int j;
 
@@ -1992,8 +2002,12 @@ void initServer(void) {
         exit(1);
     }
 
-    /* Create an event handler for accepting new connections in TCP and Unix
-     * domain sockets. */
+    /* 
+     * Create an event handler for accepting new connections in TCP and Unix
+     * domain sockets. 
+     *
+     * 创建一个事件处理器，用于接受 TCP 和 Unix 中的新连接域套接字
+     */
     for (j = 0; j < server.ipfd_count; j++) {
         if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,
             acceptTcpHandler,NULL) == AE_ERR)
@@ -3812,6 +3826,10 @@ int main(int argc, char **argv) {
     struct timeval tv;
     int j;
 
+/*
+    这里就是 C语言里面的宏定义，是为了进行条件编译。一般情况下，源程序中所有的行都参加编译。
+    但是有时候希望对其中一部分内容只在满足一定条件才进行编译，也就是对一部分内容指定编译条件。
+ */
 #ifdef REDIS_TEST
     if (argc == 3 && !strcasecmp(argv[1], "test")) {
         if (!strcasecmp(argv[2], "ziplist")) {
@@ -3838,7 +3856,10 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    /* We need to initialize our libraries, and the server configuration. */
+    /* 
+        We need to initialize our libraries, and the server configuration. 
+        我们需要初始化我们的库和服务器配置
+    */
 #ifdef INIT_SETPROCTITLE_REPLACEMENT
     spt_init(argc, argv);
 #endif
@@ -3850,6 +3871,7 @@ int main(int argc, char **argv) {
     getRandomHexChars(hashseed,sizeof(hashseed));
     dictSetHashFunctionSeed((uint8_t*)hashseed);
     server.sentinel_mode = checkForSentinelMode(argc,argv);
+    // 设定默认的参数值，并读取配置文件 redis.conf。
     initServerConfig();
     moduleInitModulesSystem();
 
@@ -3960,7 +3982,7 @@ int main(int argc, char **argv) {
     server.supervised = redisIsSupervised(server.supervised_mode);
     int background = server.daemonize && !server.supervised;
     if (background) daemonize();
-
+    // 该函数主要对 server 进行初始化
     initServer();
     if (background || server.pidfile) createPidFile();
     redisSetProcTitle(argv[0]);

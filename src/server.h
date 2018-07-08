@@ -619,24 +619,41 @@ typedef struct redisObject {
 
 struct evictionPoolEntry; /* Defined in evict.c */
 
-/* Redis database representation. There are multiple databases identified
+/* 
+ * 
+ * Redis database representation. There are multiple databases identified
  * by integers from 0 (the default database) up to the max configured
- * database. The database number is the 'id' field in the structure. */
+ * database. The database number is the 'id' field in the structure. 
+ *
+ * Redis数据库表示。 确定了多个数据库从0（默认数据库）到最大配置的整数
+ * 数据库。 数据库编号是结构中的“id”字段。
+ */
 typedef struct redisDb {
+    // 这个就代表 DB 的键空间
     dict *dict;                 /* The keyspace for this DB */
+    // 超时设置的键集合
     dict *expires;              /* Timeout of keys with a timeout set */
+    // 客户端等待数据的 key
     dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP)*/
+    // 被阻塞的 key 接收到 push
     dict *ready_keys;           /* Blocked keys that received a PUSH */
+    // 被 watch 监控的key 集合
     dict *watched_keys;         /* WATCHED keys for MULTI/EXEC CAS */
+    // 数据库的便编号
     int id;                     /* Database ID */
     long long avg_ttl;          /* Average TTL, just for stats */
+    // 逐渐尝试逐个碎片整理的键名列表
     list *defrag_later;         /* List of key names to attempt to defrag one by one, gradually. */
 } redisDb;
 
-/* Client MULTI/EXEC state */
+/* 
+  * 客户端事务命令结构体
+  * Client MULTI/EXEC state 
+  */
 typedef struct multiCmd {
     robj **argv;
     int argc;
+    // redisCommand 结构体
     struct redisCommand *cmd;
 } multiCmd;
 
@@ -676,7 +693,8 @@ typedef struct blockingState {
                                     handled in module.c. */
 } blockingState;
 
-/* The following structure represents a node in the server.ready_keys list,
+/* 
+ * The following structure represents a node in the server.ready_keys list,
  * where we accumulate all the keys that had clients blocked with a blocking
  * operation such as B[LR]POP, but received new data in the context of the
  * last executed command.
@@ -686,7 +704,9 @@ typedef struct blockingState {
  * Note that server.ready_keys will not have duplicates as there dictionary
  * also called ready_keys in every structure representing a Redis database,
  * where we make sure to remember if a given key was already added in the
- * server.ready_keys list. */
+ * server.ready_keys list. 
+ * 
+ */
 typedef struct readyList {
     redisDb *db;
     robj *key;
@@ -696,20 +716,27 @@ typedef struct readyList {
  * Clients are taken in a linked list. */
 typedef struct client {
     uint64_t id;            /* Client incremental unique ID. */
+    // 客户端连接的 socket ，也就是句柄
     int fd;                 /* Client socket. */
+    // 操作的数据库
     redisDb *db;            /* Pointer to currently SELECTed DB. */
     robj *name;             /* As set by CLIENT SETNAME. */
+    // 命令缓冲区
     sds querybuf;           /* Buffer we use to accumulate client queries. */
     sds pending_querybuf;   /* If this is a master, this buffer represents the
                                yet not applied replication stream that we
                                are receiving from the master. */
+
     size_t querybuf_peak;   /* Recent (100ms or more) peak of querybuf size. */
     int argc;               /* Num of arguments of current command. */
     robj **argv;            /* Arguments of current command. */
     struct redisCommand *cmd, *lastcmd;  /* Last command executed. */
     int reqtype;            /* Request protocol type: PROTO_REQ_* */
+    // 要读取的多个批量参数的数量
     int multibulklen;       /* Number of multi bulk arguments left to read. */
+    // 多批量请求中的批量参数的长度
     long bulklen;           /* Length of bulk argument in multi bulk request. */
+    // 用户命令的执行结果，会被异步的反馈给用户
     list *reply;            /* List of reply objects to send to the client. */
     unsigned long long reply_bytes; /* Tot bytes of objects in reply list. */
     size_t sentlen;         /* Amount of bytes already sent in the current
@@ -740,6 +767,7 @@ typedef struct client {
     int btype;              /* Type of blocking op if CLIENT_BLOCKED. */
     blockingState bpop;     /* blocking state */
     long long woff;         /* Last write global replication offset. */
+    // 使用 watch 监控的所有 key
     list *watched_keys;     /* Keys WATCHED for MULTI/EXEC CAS */
     dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */
     list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */
@@ -752,6 +780,7 @@ typedef struct client {
 } client;
 
 /**
+ * todo: 这个是从配置文件配置的 save 条件，也就是 rdb 的条件
  * 保存了一个 save 选项设置的保存条件
  */
 struct saveparam {
@@ -783,7 +812,10 @@ struct sharedObjectsStruct {
     sds minstring, maxstring;
 };
 
-/* ZSETs use a specialized version of Skiplists */
+/* 
+  ZSETs use a specialized version of Skiplists 
+  跳跃表中的数据节点
+ */
 typedef struct zskiplistNode {
     sds ele;
     double score;
@@ -1267,6 +1299,10 @@ typedef struct pubsubPattern {
 
 typedef void redisCommandProc(client *c);
 typedef int *redisGetKeysProc(struct redisCommand *cmd, robj **argv, int argc, int *numkeys);
+
+/**
+ * Redis 所有命令的结构体
+ */
 struct redisCommand {
     char *name;
     redisCommandProc *proc;
