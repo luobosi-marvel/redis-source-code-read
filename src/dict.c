@@ -180,6 +180,8 @@ int dictExpand(dict *d, unsigned long size) {
     /*
      * Is this the first initialization? If so it's not really a rehashing
      * we just set the first hash table so that it can accept keys.
+     * 
+     * 如果这是第一次初始化，那么直接就设置成指定大小
      */
     if (d->ht[0].table == NULL) {
         d->ht[0] = n;
