@@ -44,6 +44,10 @@
 /* Unused arguments generate annoying warnings... */
 #define DICT_NOTUSED(V) ((void) V)
 
+/**
+ * 这里就是我们存储的键值对的结构体
+ * 每一个键值对都会转变成 dictEntry 结构体
+ */
 typedef struct dictEntry {
     void *key;              // 键
     union {                  // 值
@@ -64,8 +68,13 @@ typedef struct dictType {
     void (*valDestructor)(void *privdata, void *obj);//销毁value，一般为释放空间
 } dictType;
 
-/* This is our hash table structure. Every dictionary has two of this as we
- * implement incremental rehashing, for the old to the new table. */
+/*
+ * This is our hash table structure. Every dictionary has two of this as we
+ * implement incremental rehashing, for the old to the new table.
+ *
+ * 这里就是我们的 hash table 结构，存储这数据库中所有的 key-value，
+ * 不管是 sds，还是 set，还是什么结构，都存储在里面
+ */
 typedef struct dictht {
     dictEntry **table;              // 哈希表数组
     unsigned long size;          // 哈希表大小
@@ -73,6 +82,9 @@ typedef struct dictht {
     unsigned long used;       // 该哈希表已有节点数量
 } dictht;
 
+/**
+ * 这里就是字典结构，指向了特定的hash表，表1存储所有元素，表2用来扩容
+ */
 typedef struct dict {
     dictType *type;         // 类型特定函数
     void *privdata;         // 私有数据
@@ -138,27 +150,38 @@ typedef void (dictScanBucketFunction)(void *privdata, dictEntry **bucketref);
         (d)->type->keyCompare((d)->privdata, key1, key2) : \
         (key1) == (key2))
 
+// 计算 key 的hash 值
 #define dictHashKey(d, key) (d)->type->hashFunction(key)
+// 获取 key 值
 #define dictGetKey(he) ((he)->key)
 #define dictGetVal(he) ((he)->v.val)
 #define dictGetSignedIntegerVal(he) ((he)->v.s64)
 #define dictGetUnsignedIntegerVal(he) ((he)->v.u64)
 #define dictGetDoubleVal(he) ((he)->v.d)
 #define dictSlots(d) ((d)->ht[0].size+(d)->ht[1].size)
+// 字典大小 是 ht[0].used + ht[1].used 因为扩容的时候两个数组里面都有元素
 #define dictSize(d) ((d)->ht[0].used+(d)->ht[1].used)
+// 是否正在扩容
 #define dictIsRehashing(d) ((d)->rehashidx != -1)
 
 /* API */
+// 创建一个字典
 dict *dictCreate(dictType *type, void *privDataPtr);
+
 int dictExpand(dict *d, unsigned long size);
+// 添加一个键值对
 int dictAdd(dict *d, void *key, void *val);
 dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing);
 dictEntry *dictAddOrFind(dict *d, void *key);
+// 更新
 int dictReplace(dict *d, void *key, void *val);
+// 删除
 int dictDelete(dict *d, const void *key);
+//
 dictEntry *dictUnlink(dict *ht, const void *key);
 void dictFreeUnlinkedEntry(dict *d, dictEntry *he);
 void dictRelease(dict *d);
+// 查找
 dictEntry * dictFind(dict *d, const void *key);
 void *dictFetchValue(dict *d, const void *key);
 int dictResize(dict *d);
