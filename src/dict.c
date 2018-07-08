@@ -154,7 +154,10 @@ int dictResize(dict *d) {
     return dictExpand(d, minimal);
 }
 
-/* 将 dict 扩容到指定大小 */
+/*
+    @param d    原字典
+    @param size     扩容到指定的 size
+ */
 int dictExpand(dict *d, unsigned long size) {
     /*
      * the size is invalid if it is smaller than the number of
@@ -168,10 +171,10 @@ int dictExpand(dict *d, unsigned long size) {
     dictht n; /* the new hash table */
     unsigned long realsize = _dictNextPower(size); // 重新计算新的 hashtable 的容量
 
-    /* Rehashing to the same table size is not useful. */
+    /* 扩容之后的大小和原来的大小一样的话则说明这次扩容是不成功的 */
     if (realsize == d->ht[0].size) return DICT_ERR;
 
-    /* Allocate the new hash table and initialize all pointers to NULL */
+    /* 给新 hashtable 初始化 */
     n.size = realsize;
     n.sizemask = realsize - 1;
     n.table = zcalloc(realsize * sizeof(dictEntry *));
@@ -188,8 +191,9 @@ int dictExpand(dict *d, unsigned long size) {
         return DICT_OK;
     }
 
-    /* Prepare a second hash table for incremental rehashing */
+    /* 准备对第二个进行增量重组 */
     d->ht[1] = n;
+    // rehashidx = 0 表示将要准备扩容了
     d->rehashidx = 0;
     return DICT_OK;
 }
@@ -226,8 +230,10 @@ int dictRehash(dict *d, int n) {
         /* Note that rehashidx can't overflow as we are sure there are more
          * elements because ht[0].used != 0 */
         assert(d->ht[0].size > (unsigned long) d->rehashidx);
+        // 一旦超出最大空桶的范围则直接退出
         while (d->ht[0].table[d->rehashidx] == NULL) {
             d->rehashidx++;
+            // empty_visits 最大空桶数量
             if (--empty_visits == 0) return 1;
         }
         de = d->ht[0].table[d->rehashidx];
@@ -251,8 +257,11 @@ int dictRehash(dict *d, int n) {
 
     /* 检查是否已经 rehash 完毕了 */
     if (d->ht[0].used == 0) {
+        // 释放 ht[0]
         zfree(d->ht[0].table);
+        // 将 ht[1] 赋值给 ht[0]
         d->ht[0] = d->ht[1];
+        // 重置 ht[1]，等待下一次扩容
         _dictReset(&d->ht[1]);
         d->rehashidx = -1;
         return 0;
@@ -296,6 +305,9 @@ int dictRehashMilliseconds(dict *d, int ms) {
  * This function is called by common lookup or update operations in the
  * dictionary so that the hash table automatically migrates from H1 to H2
  * while it is actively used. 
+ * 对字典进行步长为 1 尝试 rehash
+ * 
+ * _dictRehashStep:当对字典进行添加、查找、删除、随机获取元素都会执行一次
  */
 static void _dictRehashStep(dict *d) {
     if (d->iterators == 0) dictRehash(d, 1);
@@ -335,7 +347,7 @@ dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing) {
     long index;
     dictEntry *entry;
     dictht *ht;
-
+    // 判断 dict 是否正在扩容
     if (dictIsRehashing(d)) _dictRehashStep(d);
 
     /* 获取新元素的索引，如果返回 -1 则说明该元素已经存在 */
@@ -639,15 +651,21 @@ void dictReleaseIterator(dictIterator *iter) {
     zfree(iter);
 }
 
-/* Return a random entry from the hash table. Useful to
- * implement randomized algorithms */
+/* 
+ * 从字典中随机获取一个值 
+ * todo：要理解这个随机获取值得算法
+ * 这里是怎么处理扩容时返回随机元素的
+ */
 dictEntry *dictGetRandomKey(dict *d) {
     dictEntry *he, *orighe;
     unsigned long h;
     int listlen, listele;
 
     if (dictSize(d) == 0) return NULL;
+    // 如果正在扩容，先对字典进行步长为 1 的扩容，
+    // 如果成功了则不需要再继续扩容了
     if (dictIsRehashing(d)) _dictRehashStep(d);
+    // 说明还需要继续扩容
     if (dictIsRehashing(d)) {
         do {
             /* We are sure there are no elements in indexes from 0
@@ -664,6 +682,7 @@ dictEntry *dictGetRandomKey(dict *d) {
             he = d->ht[0].table[h];
         } while (he == NULL);
     }
+
 
     /* Now we found a non empty bucket, but it is a linked
      * list and we need to get a random element from the list.
@@ -782,7 +801,8 @@ static unsigned long rev(unsigned long v) {
     return v;
 }
 
-/* dictScan() is used to iterate over the elements of a dictionary.
+/* 
+ * dictScan() is used to iterate over the elements of a dictionary.
  *
  * Iterating works the following way:
  *
@@ -865,6 +885,9 @@ static unsigned long rev(unsigned long v) {
  *    we are sure we don't miss keys moving during rehashing.
  * 3) The reverse cursor is somewhat hard to understand at first, but this
  *    comment is supposed to help.
+ * 
+ *
+ *
  */
 unsigned long dictScan(dict *d,
                        unsigned long v,
@@ -956,10 +979,11 @@ static int _dictExpandIfNeeded(dict *d) {
     /* If the hash table is empty expand it to the initial size. */
     if (d->ht[0].size == 0) return dictExpand(d, DICT_HT_INITIAL_SIZE);
 
-    /* If we reached the 1:1 ratio, and we are allowed to resize the hash
-     * table (global setting) or we should avoid it but the ratio between
-     * elements/buckets is over the "safe" threshold, we resize doubling
-     * the number of buckets. */
+    /*如果哈希表的已用节点数 >= 哈希表的大小，并且以下条件任一个为真： 
+       1) dict_can_resize 为真 
+       2) 已用节点数除以哈希表大小之比大于 dict_force_resize_ratio 
+       那么调用 dictExpand 对哈希表进行扩展,扩展的体积至少为已使用节点数的两倍 
+    */  
     if (d->ht[0].used >= d->ht[0].size &&
         (dict_can_resize ||
          d->ht[0].used / d->ht[0].size > dict_force_resize_ratio)) {
@@ -977,7 +1001,8 @@ static unsigned long _dictNextPower(unsigned long size) {
     // 这样就很影响效率了，所以 redis 元素是需要控制的
     if (size >= LONG_MAX) return LONG_MAX + 1LU;
     while (1) {
-        // todo 这里并不是 size 的两倍，而是大于 size 的最小2次幂
+        // todo 这里并不是 d->ht[0].used*2 的两倍，而是大于 d->ht[0].used*2 的最小2次幂
+        // _dictExpandIfNeeded() 该方法可以看出 dictExpand(d, d->ht[0].used*2)
         if (i >= size)
             return i;
         i *= 2;
@@ -1014,7 +1039,7 @@ static long _dictKeyIndex(dict *d, const void *key, uint64_t hash, dictEntry **e
             // 2. 两个元素不一样，采用头插法解决冲突问题
             he = he->next;
         }
-        // 正在进行 rehash 则继续，否则退出
+        // 如果当前没有进行 rehash，则不需要查找 ht[1],直接退出即可
         if (!dictIsRehashing(d)) break;
     }
     // 返回 idx
@@ -1028,14 +1053,21 @@ void dictEmpty(dict *d, void(callback)(void *)) {
     d->iterators = 0;
 }
 
+/*
+    字典进行 rehash 的标志
+ */
 void dictEnableResize(void) {
     dict_can_resize = 1;
 }
 
+/*
+    字典没有进行 rehash 的标志
+ */
 void dictDisableResize(void) {
     dict_can_resize = 0;
 }
 
+/* 获取某个 key 的 hash 值 */
 uint64_t dictGetHash(dict *d, const void *key) {
     return dictHashKey(d, key);
 }

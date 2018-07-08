@@ -7,7 +7,7 @@ void _redisAssert(char *x, char *y, int l) {
 }
 
 /**
- * 计算 key 的hash 值
+ * todo: 计算 key 的 hash 值
  * 
  * @param  keyp [description]
  * @return      [description]

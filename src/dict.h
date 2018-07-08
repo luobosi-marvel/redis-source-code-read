@@ -91,7 +91,7 @@ typedef struct dict {
     dictht ht[2];               // hash 表
     // 纪录 rehash 的进度
     long rehashidx; /* rehashing not in progress if rehashidx == -1 */
-    unsigned long iterators; /* number of iterators currently running */
+    unsigned long iterators; /* 当前迭代器的个数 */
 } dict;
 
 /* If safe is set to 1 this is a safe iterator, that means, you can call
