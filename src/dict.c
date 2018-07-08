@@ -968,6 +968,7 @@ static int _dictExpandIfNeeded(dict *d) {
 
 /* hash 表的容量一定是 2 的幂次方 重新计算hashtable 的容量 */
 static unsigned long _dictNextPower(unsigned long size) {
+    // DICT_HT_INITIAL_SIZE = 4
     unsigned long i = DICT_HT_INITIAL_SIZE;
     //todo: 扩容算法
     // 如果元素比 long 最大值还要大，那么每次扩容 1 个元素
