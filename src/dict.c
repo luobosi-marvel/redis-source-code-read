@@ -979,7 +979,7 @@ static int _dictExpandIfNeeded(dict *d) {
     /* If the hash table is empty expand it to the initial size. */
     if (d->ht[0].size == 0) return dictExpand(d, DICT_HT_INITIAL_SIZE);
 
-    /*如果哈希表的已用节点数 >= 哈希表的大小，并且以下条件任一个为真： 
+    /* 如果哈希表的已用节点数 >= 哈希表的大小，并且以下条件任一个为真：
        1) dict_can_resize 为真 
        2) 已用节点数除以哈希表大小之比大于 dict_force_resize_ratio 
        那么调用 dictExpand 对哈希表进行扩展,扩展的体积至少为已使用节点数的两倍 
