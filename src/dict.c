@@ -998,7 +998,7 @@ static unsigned long _dictNextPower(unsigned long size) {
     unsigned long i = DICT_HT_INITIAL_SIZE;
     //todo: 扩容算法
     // 如果元素比 long 最大值还要大，那么每次扩容 1 个元素
-    // 这样就很影响效率了，所以 redis 元素是需要控制的
+    // 注意了：这里的 size = used * 2 所以这里至少是扩容了
     if (size >= LONG_MAX) return LONG_MAX + 1LU;
     while (1) {
         // todo 这里并不是 d->ht[0].used*2 的两倍，而是大于 d->ht[0].used*2 的最小2次幂

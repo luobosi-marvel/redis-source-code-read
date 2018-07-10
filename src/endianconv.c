@@ -43,9 +43,15 @@
 
 
 #include <stdint.h>
-
-/* Toggle the 16 bit unsigned integer pointed by *p from little endian to
- * big endian */
+// todo: 大小端切换 该文件主要服务于inset集合升级
+/*
+ * Toggle the 16 bit unsigned integer pointed by *p from little endian to
+ * big endian
+ * 由于 Redis 大部分采用的是小端序列，但是 TCP/IP 协议要求网络传输的时候
+ * 统一采用大端序列传输数据，所以这里就涉及小端切换大端的操作
+ *
+ * 将* p指向的16位无符号整数从小端切换到大端
+ */
 void memrev16(void *p) {
     unsigned char *x = p, t;
 
@@ -54,8 +60,10 @@ void memrev16(void *p) {
     x[1] = t;
 }
 
-/* Toggle the 32 bit unsigned integer pointed by *p from little endian to
- * big endian */
+/*
+ * Toggle the 32 bit unsigned integer pointed by *p from little endian to
+ * big endian
+ */
 void memrev32(void *p) {
     unsigned char *x = p, t;
 
@@ -67,8 +75,10 @@ void memrev32(void *p) {
     x[2] = t;
 }
 
-/* Toggle the 64 bit unsigned integer pointed by *p from little endian to
- * big endian */
+/*
+ * Toggle the 64 bit unsigned integer pointed by *p from little endian to
+ * big endian
+ */
 void memrev64(void *p) {
     unsigned char *x = p, t;
 

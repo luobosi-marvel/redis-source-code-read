@@ -31,19 +31,28 @@
 #ifndef __INTSET_H
 #define __INTSET_H
 #include <stdint.h>
-
+/**
+ * 整型数据结构体
+ */
 typedef struct intset {
+    // 编码格式
     uint32_t encoding;
+    // 集合长度
     uint32_t length;
+    // 用来存储集合的容器
     int8_t contents[];
 } intset;
-
+// 创建一个 intset 集合
 intset *intsetNew(void);
+// 往集合里面添加元素
 intset *intsetAdd(intset *is, int64_t value, uint8_t *success);
+// 删除一个元素
 intset *intsetRemove(intset *is, int64_t value, int *success);
+// 查找元素
 uint8_t intsetFind(intset *is, int64_t value);
 int64_t intsetRandom(intset *is);
 uint8_t intsetGet(intset *is, uint32_t pos, int64_t *value);
+// 获取集合长度
 uint32_t intsetLen(const intset *is);
 size_t intsetBlobLen(intset *is);
 
