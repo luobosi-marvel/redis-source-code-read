@@ -398,7 +398,7 @@ sds sdscatlen(sds s, const void *t, size_t len) {
     // make 函数内部判断当前空间是否足够，足够则 return，不够则申请更多内存空间
     s = sdsMakeRoomFor(s,len);
     if (s == NULL) return NULL;
-    // 拷贝拼接的数据
+    // todo: 拷贝拼接的数据, 为什么需要拷贝？
     memcpy(s+curlen, t, len);
     // 设置新的 len 属性
     sdssetlen(s, curlen+len);

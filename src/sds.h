@@ -222,7 +222,10 @@ void sdsfree(sds s);
 
 // 用空字符将 SDS 扩展到指定长度
 sds sdsgrowzero(sds s, size_t len);
-/* 字符串连接操作 */
+/*
+ * todo: 字符串连接操作
+ * 这里涉及拷贝内存操作
+ */
 sds sdscatlen(sds s, const void *t, size_t len);
 /* 字符串连接操作 */
 sds sdscat(sds s, const char *t);
