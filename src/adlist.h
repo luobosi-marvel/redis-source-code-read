@@ -32,24 +32,38 @@
 #define __ADLIST_H__
 
 /* Node, List, and Iterator are the only data structures used currently. */
-
+/**
+ * 这个结构体就是链表的结构体
+ */
 typedef struct listNode {
+    // 前驱节点
     struct listNode *prev;
+    // 后驱节点
     struct listNode *next;
+    // 实际存储的值
     void *value;
 } listNode;
 
+/**
+ * 这个就是迭代器
+ */
 typedef struct listIter {
     listNode *next;
     int direction;
 } listIter;
 
+/**
+ * 链表
+ */
 typedef struct list {
+    // 头结点
     listNode *head;
+    // 尾节点
     listNode *tail;
     void *(*dup)(void *ptr);
     void (*free)(void *ptr);
     int (*match)(void *ptr, void *key);
+    // 元素个数 C 语言中 long 32 位
     unsigned long len;
 } list;
 
@@ -70,18 +84,28 @@ typedef struct list {
 #define listGetMatchMethod(l) ((l)->match)
 
 /* Prototypes */
+// 创建一个链表
 list *listCreate(void);
+// 释放一个链表结构
 void listRelease(list *list);
+//
 void listEmpty(list *list);
+// 头插法
 list *listAddNodeHead(list *list, void *value);
+// 尾插法
 list *listAddNodeTail(list *list, void *value);
+// 在 after 后面插入一个节点
 list *listInsertNode(list *list, listNode *old_node, void *value, int after);
+// 删除指定节点
 void listDelNode(list *list, listNode *node);
+// 获取节点的迭代器
 listIter *listGetIterator(list *list, int direction);
 listNode *listNext(listIter *iter);
 void listReleaseIterator(listIter *iter);
 list *listDup(list *orig);
+// 根据 key 查找节点
 listNode *listSearchKey(list *list, void *key);
+// 获取指定下标的节点元素
 listNode *listIndex(list *list, long index);
 void listRewind(list *list, listIter *li);
 void listRewindTail(list *list, listIter *li);
