@@ -52,7 +52,7 @@ list *listCreate(void)
     return list;
 }
 
-/* Remove all the elements from the list without destroying the list itself. */
+/* 相当于 java 中的 clear 清空操作 */
 void listEmpty(list *list)
 {
     unsigned long len;
@@ -79,12 +79,16 @@ void listRelease(list *list)
     zfree(list);
 }
 
-/* Add a new node to the list, to head, containing the specified 'value'
+/*
+ * Add a new node to the list, to head, containing the specified 'value'
  * pointer as value.
  *
  * On error, NULL is returned and no operation is performed (i.e. the
  * list remains unaltered).
- * On success the 'list' pointer you pass to the function is returned. */
+ * On success the 'list' pointer you pass to the function is returned.
+ *
+ * 头插入 很容易理解
+ */
 list *listAddNodeHead(list *list, void *value)
 {
     listNode *node;
@@ -105,12 +109,16 @@ list *listAddNodeHead(list *list, void *value)
     return list;
 }
 
-/* Add a new node to the list, to tail, containing the specified 'value'
+/*
+ * Add a new node to the list, to tail, containing the specified 'value'
  * pointer as value.
  *
  * On error, NULL is returned and no operation is performed (i.e. the
  * list remains unaltered).
- * On success the 'list' pointer you pass to the function is returned. */
+ * On success the 'list' pointer you pass to the function is returned.
+ *
+ * 尾插法，也很容易理解
+ */
 list *listAddNodeTail(list *list, void *value)
 {
     listNode *node;
@@ -138,18 +146,22 @@ list *listInsertNode(list *list, listNode *old_node, void *value, int after) {
         return NULL;
     node->value = value;
     if (after) {
+        // 在 old_node 后面插入
         node->prev = old_node;
+        // 这里只是把 node->next 指向 old_node->next 并没有让 old_node->next 的 prev 指针指向 node 节点。想象一下
         node->next = old_node->next;
         if (list->tail == old_node) {
             list->tail = node;
         }
     } else {
+        // 在 old_node 节点之前插入
         node->next = old_node;
         node->prev = old_node->prev;
         if (list->head == old_node) {
             list->head = node;
         }
     }
+    // 如果 node 后面还有节点，则需要接链
     if (node->prev != NULL) {
         node->prev->next = node;
     }
@@ -162,7 +174,7 @@ list *listInsertNode(list *list, listNode *old_node, void *value, int after) {
 
 /* Remove the specified node from the specified list.
  * It's up to the caller to free the private value of the node.
- *
+ * 摘链操作
  * This function can't fail. */
 void listDelNode(list *list, listNode *node)
 {
@@ -231,9 +243,11 @@ listNode *listNext(listIter *iter)
     listNode *current = iter->next;
 
     if (current != NULL) {
+        // 从头结点开始遍历
         if (iter->direction == AL_START_HEAD)
             iter->next = current->next;
         else
+            // 从尾节点开始遍历
             iter->next = current->prev;
     }
     return current;
@@ -294,11 +308,13 @@ listNode *listSearchKey(list *list, void *key)
 
     listRewind(list, &iter);
     while((node = listNext(&iter)) != NULL) {
+        // 使用 c 语言里面的匹配函数匹配
         if (list->match) {
             if (list->match(node->value, key)) {
                 return node;
             }
         } else {
+            // 直接用 == 匹配元素
             if (key == node->value) {
                 return node;
             }
@@ -307,17 +323,21 @@ listNode *listSearchKey(list *list, void *key)
     return NULL;
 }
 
-/* Return the element at the specified zero-based index
+/*
+ * Return the element at the specified zero-based index
  * where 0 is the head, 1 is the element next to head
  * and so on. Negative integers are used in order to count
  * from the tail, -1 is the last element, -2 the penultimate
- * and so on. If the index is out of range NULL is returned. */
+ * and so on. If the index is out of range NULL is returned.
+ */
 listNode *listIndex(list *list, long index) {
     listNode *n;
-
+    // todo: 这里 index 居然可以使负数。
+    // 这里负数表示从倒着查找
     if (index < 0) {
         index = (-index)-1;
         n = list->tail;
+        // 倒着往前推 index 个元素
         while(index-- && n) n = n->prev;
     } else {
         n = list->head;
@@ -326,7 +346,10 @@ listNode *listIndex(list *list, long index) {
     return n;
 }
 
-/* Rotate the list removing the tail node and inserting it to the head. */
+/*
+ * Rotate the list removing the tail node and inserting it to the head.
+ * 旋转列表，删除尾节点并将其插入头部。
+ */
 void listRotate(list *list) {
     listNode *tail = list->tail;
 
@@ -342,8 +365,11 @@ void listRotate(list *list) {
     list->head = tail;
 }
 
-/* Add all the elements of the list 'o' at the end of the
- * list 'l'. The list 'other' remains empty but otherwise valid. */
+/*
+ * Add all the elements of the list 'o' at the end of the
+ * list 'l'. The list 'other' remains empty but otherwise valid.
+ * 将整个链表加入
+ */
 void listJoin(list *l, list *o) {
     if (o->head)
         o->head->prev = l->tail;

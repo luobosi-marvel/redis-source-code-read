@@ -62,6 +62,7 @@ typedef struct list {
     listNode *tail;
     void *(*dup)(void *ptr);
     void (*free)(void *ptr);
+    // 每个节点都已个匹配函数指针(里面有匹配规则)
     int (*match)(void *ptr, void *key);
     // 元素个数 C 语言中 long 32 位
     unsigned long len;
