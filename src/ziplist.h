@@ -54,6 +54,7 @@ unsigned int ziplistCompare(unsigned char *p, unsigned char *s, unsigned int sle
  * 其实这个参数的主要用途是当用ziplist表示hash结构的时候，是按照一个field，一个value来依次存入ziplist的。
  * 也就是说，偶数索引的数据项存field，奇数索引的数据项存value。当按照field的值进行查找的时候，就需要把奇数项跳过去。
  *
+ * todo: 偶数索引，奇数索引
  * @param p
  * @param vstr
  * @param vlen

@@ -34,16 +34,43 @@
  * Helpers and low level bit functions.
  * -------------------------------------------------------------------------- */
 
-/* Count number of bits set in the binary array pointed by 's' and long
+/**
+ * 0x55555555  的二进制为 0101  0101  0101  0101  0101  0101  0101  0101， 奇位为1， 偶数为0
+ * 0x33333333  的二进制为 0011  0011  0011  0011  0011  0011  0011  0011
+ * 0x0F0F0F0F 的二级制为 0000  1111  0000  1111  0000  1111  0000  1111
+ * 0x01010101  的二进制为 0000  0001  0000  0001  0000  0001  0000  0001， 每个字节最后一位是1
+ *
+ *
+ */
+
+
+/**
+ * Count number of bits set in the binary array pointed by 's' and long
  * 'count' bytes. The implementation of this function is required to
- * work with a input string length up to 512 MB. */
+ * work with a input string length up to 512 MB.
+ *
+ * 计算在's'和long指向的二进制数组中设置的位数'count'字节。 需要执行此功能
+ * 使用输入字符串长度最大512 MB。
+ * 计算非 0 的个数
+ *
+ * @param s 字节数组
+ * @param count 字节个数
+ */
 size_t redisPopcount(void *s, long count) {
     size_t bits = 0;
     unsigned char *p = s;
     uint32_t *p4;
-    static const unsigned char bitsinbyte[256] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8};
+    static const unsigned char bitsinbyte[256] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,
+                                                     4,4,5,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,
+                                                     4,5,4,5,5,6,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,
+                                                     5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,
+                                                     4,5,5,6,4,5,5,6,5,6,6,7,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,
+                                                     3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,
+                                                     5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,2,3,3,4,3,4,4,5,3,4,4,
+                                                     5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,3,4,4,5,4,5,5,6,
+                                                     4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8};
 
-    /* Count initial bytes not aligned to 32 bit. */
+    /* Count initial bytes not aligned to 32 bit. 计数初始字节未对齐到32位。 count 在这里表示循环的次数 */
     while((unsigned long)p & 3 && count) {
         bits += bitsinbyte[*p++];
         count--;
@@ -521,7 +548,7 @@ unsigned char *getObjectReadOnlyString(robj *o, long *len, char *llbuf) {
     return p;
 }
 
-/* SETBIT key offset bitvalue */
+/* SETBIT key offset bitvalue 根据偏移量设置一个值 */
 void setbitCommand(client *c) {
     robj *o;
     char *err = "bit is not an integer or out of range";
@@ -772,7 +799,7 @@ void bitcountCommand(client *c) {
     unsigned char *p;
     char llbuf[LONG_STR_SIZE];
 
-    /* Lookup, check for type, and return 0 for non existing keys. */
+    /* 查找，检查类型，并为非现有 key 返回0。 */
     if ((o = lookupKeyReadOrReply(c,c->argv[1],shared.czero)) == NULL ||
         checkType(c,o,OBJ_STRING)) return;
     p = getObjectReadOnlyString(o,&strlen,llbuf);
@@ -808,6 +835,7 @@ void bitcountCommand(client *c) {
     if (start > end) {
         addReply(c,shared.czero);
     } else {
+        // 计算 start 和 end 之间有多少个字节
         long bytes = end-start+1;
 
         addReplyLongLong(c,redisPopcount(p+start,bytes));
