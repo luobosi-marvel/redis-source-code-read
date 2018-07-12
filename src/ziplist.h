@@ -10,6 +10,11 @@
  * ziplist的数据类型，没有用自定义的struct之类的来表达，而就是简单的unsigned char *。
  * 这是因为ziplist本质上就是一块连续内存，内部组成结构又是一个高度动态的设计（变长编码），
  * 也没法用一个固定的数据结构来表达。
+ *
+ *
+ *
+ * todo：连锁更新
+ *
  */
 
 // ziplistNew: 创建一个空的ziplist（只包含<zlbytes><zltail><zllen><zlend>）

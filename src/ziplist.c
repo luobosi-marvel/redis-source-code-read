@@ -290,6 +290,7 @@
  */
 typedef struct zlentry {
     unsigned int prevrawlensize; /* Bytes used to encode the previos entry len*/
+    // 表示前一个 entry 的长度
     unsigned int prevrawlen;     /* Previous entry len. */
     unsigned int lensize;        /* Bytes used to encode this entry type/len.
                                     For example strings have a 1, 2 or 5 bytes
@@ -300,11 +301,12 @@ typedef struct zlentry {
                                     0 (for 4 bit immediate) depending on the
                                     number range. */
     unsigned int headersize;     /* prevrawlensize + lensize. */
+    // 用于表示该 zlentry 编码格式
     unsigned char encoding;      /* Set to ZIP_STR_* or ZIP_INT_* depending on
                                     the entry encoding. However for 4 bits
                                     immediate integers this can assume a range
                                     of values and must be range-checked. */
-
+    // 这里就是用来存储 zlentry 的值得
     unsigned char *p;            /* Pointer to the very start of the entry, that
                                     is, this points to prev-entry-len field. */
 } zlentry;
@@ -509,26 +511,35 @@ unsigned int zipRawEntryLength(unsigned char *p) {
     return prevlensize + lensize + len;
 }
 
-/* Check if string pointed to by 'entry' can be encoded as an integer.
- * Stores the integer value in 'v' and its encoding in 'encoding'. */
+/*
+ * Check if string pointed to by 'entry' can be encoded as an integer.
+ * Stores the integer value in 'v' and its encoding in 'encoding'.
+ *
+ */
 int zipTryEncoding(unsigned char *entry, unsigned int entrylen, long long *v, unsigned char *encoding) {
     long long value;
 
     if (entrylen >= 32 || entrylen == 0) return 0;
+    // 将字符串转成 long long 类型，return 1/0 防止溢出
     if (string2ll((char *) entry, entrylen, &value)) {
         /* Great, the string can be encoded. Check what's the smallest
          * of our encoding types that can hold this value. */
         if (value >= 0 && value <= 12) {
             *encoding = ZIP_INT_IMM_MIN + value;
         } else if (value >= INT8_MIN && value <= INT8_MAX) {
+            // 这里是用 一个字节
             *encoding = ZIP_INT_8B;
         } else if (value >= INT16_MIN && value <= INT16_MAX) {
+            // 两个字节
             *encoding = ZIP_INT_16B;
         } else if (value >= INT24_MIN && value <= INT24_MAX) {
+            // 三个字节
             *encoding = ZIP_INT_24B;
         } else if (value >= INT32_MIN && value <= INT32_MAX) {
+            // 四个字节
             *encoding = ZIP_INT_32B;
         } else {
+            // 8 个字节
             *encoding = ZIP_INT_64B;
         }
         *v = value;
@@ -537,15 +548,17 @@ int zipTryEncoding(unsigned char *entry, unsigned int entrylen, long long *v, un
     return 0;
 }
 
-/* Store integer 'value' at 'p', encoded as 'encoding' */
+/* Store integer 'value' at 'p', encoded as 'encoding' 保存一个 integer 类型的值*/
 void zipSaveInteger(unsigned char *p, int64_t value, unsigned char encoding) {
     int16_t i16;
     int32_t i32;
     int64_t i64;
     if (encoding == ZIP_INT_8B) {
+        // 用一个字节保存值
         ((int8_t *) p)[0] = (int8_t) value;
     } else if (encoding == ZIP_INT_16B) {
         i16 = value;
+        // 直接的内存地址拷贝，效率非常高，将 i16 的地址拷贝 sizeof(i16) 个字节到 p 中
         memcpy(p, &i16, sizeof(i16));
         memrev16ifbe(p);
     } else if (encoding == ZIP_INT_24B) {
@@ -567,12 +580,13 @@ void zipSaveInteger(unsigned char *p, int64_t value, unsigned char encoding) {
     }
 }
 
-/* Read integer encoded as 'encoding' from 'p' */
+/* Read integer encoded as 'encoding' from 'p' 从'p'读取编码为'encoding'的整数 */
 int64_t zipLoadInteger(unsigned char *p, unsigned char encoding) {
     int16_t i16;
     int32_t i32;
     int64_t i64, ret = 0;
     if (encoding == ZIP_INT_8B) {
+        // 为什么直接就返回 ((int8_t *) p)[0]
         ret = ((int8_t *) p)[0];
     } else if (encoding == ZIP_INT_16B) {
         memcpy(&i16, p, sizeof(i16));
@@ -628,10 +642,13 @@ unsigned char *ziplistNew(void) {
     return zl;
 }
 
-/* Resize the ziplist. */
+/* Resize the ziplist. 重新调整 ziplist 的长度 */
 unsigned char *ziplistResize(unsigned char *zl, unsigned int len) {
+    // 内存地址拷贝，涉及新旧迁移
     zl = zrealloc(zl, len);
+    // 转换为大端
     ZIPLIST_BYTES(zl) = intrev32ifbe(len);
+    // 将最后一个值设置为 255
     zl[len - 1] = ZIP_END;
     return zl;
 }
@@ -717,7 +734,10 @@ unsigned char *__ziplistCascadeUpdate(unsigned char *zl, unsigned char *p) {
     return zl;
 }
 
-/* Delete "num" entries, starting at "p". Returns pointer to the ziplist. */
+/*
+ * Delete "num" entries, starting at "p". Returns pointer to the ziplist.
+ * 从 p 指向的指针节，删除 num 的entries。返回 ziplist 的指针
+ */
 unsigned char *__ziplistDelete(unsigned char *zl, unsigned char *p, unsigned int num) {
     unsigned int i, totlen, deleted = 0;
     size_t offset;
@@ -785,17 +805,21 @@ unsigned char *__ziplistDelete(unsigned char *zl, unsigned char *p, unsigned int
 /* Insert item at "p". 插入一个元素 */
 unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned char *s, unsigned int slen) {
     size_t curlen = intrev32ifbe(ZIPLIST_BYTES(zl)), reqlen;
+    // 这里明明就是用 4 位去存储前一个字节的长度
     unsigned int prevlensize, prevlen = 0;
 
     size_t offset;
     int nextdiff = 0;
+    // 这里的 encoding 是一个字节
     unsigned char encoding = 0;
+    // 理解成标志
     long long value = 123456789; /* initialized to avoid warning. Using a value
                                     that is easy to see if for some reason
                                     we use it uninitialized. */
+    // 尾部节点
     zlentry tail;
 
-    /* Find out prevlen for the entry that is inserted. */
+    /* Find out prevlen for the entry that is inserted. 找出插入的条目的 prevlen。*/
     if (p[0] != ZIP_END) {
         ZIP_DECODE_PREVLEN(p, prevlensize, prevlen);
     } else {
@@ -805,7 +829,7 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
         }
     }
 
-    /* See if the entry can be encoded */
+    /* 查看条目是否可以编码 */
     if (zipTryEncoding(s, slen, &value, &encoding)) {
         /* 'encoding' is set to the appropriate integer encoding */
         reqlen = zipIntSize(encoding);
@@ -882,7 +906,8 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
     return zl;
 }
 
-/* Merge ziplists 'first' and 'second' by appending 'second' to 'first'.
+/*
+ * Merge ziplists 'first' and 'second' by appending 'second' to 'first'.
  *
  * NOTE: The larger ziplist is reallocated to contain the new merged ziplist.
  * Either 'first' or 'second' can be used for the result.  The parameter not
@@ -896,7 +921,8 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
  * On failure: returns NULL if the merge is impossible.
  * On success: returns the merged ziplist (which is expanded version of either
  * 'first' or 'second', also frees the other unused input ziplist, and sets the
- * input ziplist argument equal to newly reallocated ziplist return value. */
+ * input ziplist argument equal to newly reallocated ziplist return value.
+ */
 unsigned char *ziplistMerge(unsigned char **first, unsigned char **second) {
     /* If any params are null, we can't merge, so NULL. */
     if (first == NULL || *first == NULL || second == NULL || *second == NULL)
@@ -1008,6 +1034,7 @@ unsigned char *ziplistMerge(unsigned char **first, unsigned char **second) {
  */
 unsigned char *ziplistPush(unsigned char *zl, unsigned char *s, unsigned int slen, int where) {
     unsigned char *p;
+    // 判断是在头部插入还是在尾部插入，如果在头部插入，可能会出现连锁更新问题
     p = (where == ZIPLIST_HEAD) ? ZIPLIST_ENTRY_HEAD(zl) : ZIPLIST_ENTRY_END(zl);
     return __ziplistInsert(zl, p, s, slen);
 }
