@@ -33,6 +33,7 @@ static int64_t _intsetGetEncoded(intset *is, int pos, uint8_t enc) {
 
     if (enc == INTSET_ENC_INT64) {
         // memcpy 函数是内存拷贝函数
+        // todo：性能提升，直接操作内存，不使用下标
         // 这里不是访问下标，而是直接操作内存地址，效率更快，这也是为什么需要传入编码格式的原因
         memcpy(&v64, ((int64_t *) is->contents) + pos, sizeof(v64));
         // 将 64位无符号整型由小端转成大端
@@ -49,7 +50,7 @@ static int64_t _intsetGetEncoded(intset *is, int pos, uint8_t enc) {
     }
 }
 
-/* Return the value at pos, using the configured encoding. */
+/* 获取指定位置上的值 */
 static int64_t _intsetGet(intset *is, int pos) {
     return _intsetGetEncoded(is, pos, intrev32ifbe(is->encoding));
 }
@@ -103,36 +104,41 @@ static intset *intsetResize(intset *is, uint32_t len) {
  * the value is not present in the intset and sets "pos" to the position
  * where "value" can be inserted. 
  *
- * 二分法查找该元素是否已经存在该集合之中
+ * todo: intset.c 使用二分法查找该元素是否已经存在该集合之中，同时计算该位置应该要放置的位置
  */
 static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
     int min = 0, max = intrev32ifbe(is->length) - 1, mid = -1;
     int64_t cur = -1;
 
-    /* The value can never be found when the set is empty */
+    /* 如果集合为空，则之间将 pos 设置为0 */
     if (intrev32ifbe(is->length) == 0) {
         if (pos) *pos = 0;
         return 0;
     } else {
-        /* Check for the case where we know we cannot find the value,
-         * but do know the insert position. */
+        // 这里说明元素肯定不在集合当中
+        /* 如果该值比最后一个元素还要大，则将 pos 设置为 length */
         if (value > _intsetGet(is, intrev32ifbe(is->length) - 1)) {
             if (pos) *pos = intrev32ifbe(is->length);
             return 0;
+            // 如果元素比第一元素还小，则将 pos 设置为 0
         } else if (value < _intsetGet(is, 0)) {
             if (pos) *pos = 0;
             return 0;
         }
     }
 
+    // 元素可能会在集合中，采用二分法查找元素
     while (max >= min) {
+        // 标准二分法
         mid = ((unsigned int) min + (unsigned int) max) >> 1;
+        // 获取指定位置上的元素
         cur = _intsetGet(is, mid);
         if (value > cur) {
             min = mid + 1;
         } else if (value < cur) {
             max = mid - 1;
         } else {
+            // mid 可能和 value 相同，或者
             break;
         }
     }
@@ -141,6 +147,7 @@ static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
         if (pos) *pos = mid;
         return 1;
     } else {
+        // todo：给 pos 赋值
         if (pos) *pos = min;
         return 0;
     }
@@ -148,6 +155,7 @@ static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
 
 /*
  * todo: 如果给定的值超过了当前数组的编码，那么该方法会将 intset 升级为更大的编码然后插入给定整数
+ * 插入的元素要么比当前集合编码大，要么比编码小，所以要么在尾部插入，要么在头部插入
  *
  */
 static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
@@ -191,13 +199,16 @@ static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
  * @param to   [description]
  */
 static void intsetMoveTail(intset *is, uint32_t from, uint32_t to) {
+    // to = from + 1
     void *src, *dst;
     // 计算 from 位置开始共有多少个元素
     uint32_t bytes = intrev32ifbe(is->length) - from;
     uint32_t encoding = intrev32ifbe(is->encoding);
     // 根据编码方式计算需要移动的字节数、目标位置移动开始位置
     if (encoding == INTSET_ENC_INT64) {
+        // src 指向 from 开始往后的内存区域
         src = (int64_t *) is->contents + from;
+        // dst 指向 to 开始往后的内存区域
         dst = (int64_t *) is->contents + to;
         bytes *= sizeof(int64_t);
     } else if (encoding == INTSET_ENC_INT32) {
@@ -209,7 +220,9 @@ static void intsetMoveTail(intset *is, uint32_t from, uint32_t to) {
         dst = (int16_t *) is->contents + to;
         bytes *= sizeof(int16_t);
     }
-    // 内存移动
+    // todo: 内存移动 考虑一下为什么不用 memcpy 方法, java 里面就是使用的 copy 方法
+    // memmove() 与 memcpy() 类似都是用来复制 src 所指的内存内容前 num 个字节到 dest 所指的地址上。
+    // 因为这里不涉及两个数组的拷贝，只需要移动内存即可
     memmove(dst, src, bytes);
 }
 
@@ -239,7 +252,7 @@ intset *intsetAdd(intset *is, int64_t value, uint8_t *success) {
          * This call will populate "pos" with the right position to insert
          * the value when it cannot be found. 
          *
-         * 判断该值是否已经存在该集合之中
+         * todo：判断该值是否已经存在该集合之中，并计算该元素应该放置的位置
          */
         if (intsetSearch(is, value, &pos)) {
             if (success) *success = 0;
