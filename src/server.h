@@ -1324,10 +1324,17 @@ struct redisFunctionSym {
     unsigned long pointer;
 };
 
+/**
+ * 排序对象
+ */
 typedef struct _redisSortObject {
+    // 指向实际的对象
     robj *obj;
+    // 权重
     union {
+        // 每个对象有一个分值
         double score;
+        // 排序带有 BY 选项的字符串值时使用
         robj *cmpobj;
     } u;
 } redisSortObject;
