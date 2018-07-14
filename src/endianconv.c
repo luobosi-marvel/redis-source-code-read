@@ -44,9 +44,8 @@
 
 #include <stdint.h>
 // todo: 大小端切换 该文件主要服务于inset集合升级
+
 /*
- * Toggle the 16 bit unsigned integer pointed by *p from little endian to
- * big endian
  * 由于 Redis 大部分采用的是小端序列，但是 TCP/IP 协议要求网络传输的时候
  * 统一采用大端序列传输数据，所以这里就涉及小端切换大端的操作
  *

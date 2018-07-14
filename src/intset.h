@@ -35,13 +35,26 @@
  * 整型数据结构体
  */
 typedef struct intset {
-    // 编码格式
+    /*
+     * 数据编码，表示 intset 中的每个元素用几个字节来存储
+     * INTSET_ENC_INT16 表示每个元素用2个字节存储
+     * INTSET_ENC_INT32 表示每个元素用4个字节存储
+     * INTSET_ENC_INT64 表示每个元素用8个字节存储
+     * 因此，intset中存储的整数最多只能占用64bit。
+     */
     uint32_t encoding;
     // 集合长度
     uint32_t length;
-    // 用来存储集合的容器
+    /*
+     * 用来存储集合的容器，是一个柔性数组（flexible array member）
+     *
+     * 比起指针用空数组有这样的优势：
+     * 1. 不需要初始化，数组名直接就是缓冲区数据的起始地址(如果存在数据)
+     * 2. 不占任何空间，指针需要占用4 byte长度空间，空数组不占任何空间，节约了空间
+     */
     int8_t contents[];
 } intset;
+
 // 创建一个 intset 集合
 intset *intsetNew(void);
 // 往集合里面添加元素

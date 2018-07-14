@@ -87,12 +87,10 @@ intset *intsetNew(void) {
 
 /*
  * Resize the intset  扩容，重新分配数组的大小, 每次扩容一个元素
- * todo: 这里为什么不用判断就直接把小端转成大端？
- * 因为这里存储就是按照小端存储的
  */
 static intset *intsetResize(intset *is, uint32_t len) {
-    // 计算新增的字节数
-    // intrev32ifbe 用来把 32 位整型从小端转成大端
+    // 计算新增的字节数，因为可能涉及扩容了
+    // 比如 len = 11 但是现在编码变成了 INTSET_ENC_INT64，所以要重新计算is 的内存大小
     uint32_t size = len * intrev32ifbe(is->encoding);
     // 重新分配内存
     is = zrealloc(is, sizeof(intset) + size);
@@ -107,6 +105,7 @@ static intset *intsetResize(intset *is, uint32_t len) {
  *
  * todo: intset.c 使用二分法查找该元素是否已经存在该集合之中，同时计算该位置应该要放置的位置
  */
+
 static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
     int min = 0, max = intrev32ifbe(is->length) - 1, mid = -1;
     int64_t cur = -1;
@@ -154,10 +153,11 @@ static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
     }
 }
 
+
+
 /*
  * todo: 如果给定的值超过了当前数组的编码，那么该方法会将 intset 升级为更大的编码然后插入给定整数
  * 插入的元素要么比当前集合编码大，要么比编码小，所以要么在尾部插入，要么在头部插入
- *
  */
 static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
     // 旧的编码格式
@@ -173,11 +173,6 @@ static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
     // 扩容一个元素
     is = intsetResize(is, intrev32ifbe(is->length) + 1);
 
-    /*
-     * Upgrade back-to-front so we don't overwrite values.
-     * Note that the "prepend" variable is used to make sure we have an empty
-     * space at either the beginning or the end of the intset.
-     */
     while (length--)
         _intsetSet(is, length + prepend, _intsetGetEncoded(is, length, curenc));
 
@@ -269,6 +264,7 @@ intset *intsetAdd(intset *is, int64_t value, uint8_t *success) {
     is->length = intrev32ifbe(intrev32ifbe(is->length) + 1);
     return is;
 }
+
 
 /* Delete integer from intset */
 intset *intsetRemove(intset *is, int64_t value, int *success) {
