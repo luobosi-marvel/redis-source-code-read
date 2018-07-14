@@ -36,21 +36,32 @@
 void sunionDiffGenericCommand(client *c, robj **setkeys, int setnum,
                               robj *dstkey, int op);
 
-/* Factory method to return a set that *can* hold "value". When the object has
+/*
+ * Factory method to return a set that *can* hold "value". When the object has
  * an integer-encodable value, an intset will be returned. Otherwise a regular
- * hash table. */
+ * hash table.
+ */
 robj *setTypeCreate(sds value) {
+    // 判断 sds 类型的 value 是否可以装换成 long long 类型
     if (isSdsRepresentableAsLongLong(value,NULL) == C_OK)
+        // 返回 intset 集合类型
         return createIntsetObject();
+    // 否则创建一个 SET 对象，底层是 hashtable
     return createSetObject();
 }
 
-/* Add the specified value into a set.
+/**
+ * 往 set 中添加一个指定的值
  *
- * If the value was already member of the set, nothing is done and 0 is
- * returned, otherwise the new element is added and 1 is returned. */
+ * 如果该值已经是该集合的成员，则不执行任何操作，0为
+ * 返回，否则添加新元素并返回1。
+ *
+ * @param subject 指向 set 对象的指针
+ * @param value 要添加的值
+ */
 int setTypeAdd(robj *subject, sds value) {
     long long llval;
+    // 如果 set 编码格式是 hashtable
     if (subject->encoding == OBJ_ENCODING_HT) {
         dict *ht = subject->ptr;
         dictEntry *de = dictAddRaw(ht,value,NULL);
@@ -59,23 +70,33 @@ int setTypeAdd(robj *subject, sds value) {
             dictSetVal(ht,de,NULL);
             return 1;
         }
+        // 如果 subject 的编码格式是 intset
     } else if (subject->encoding == OBJ_ENCODING_INTSET) {
+        // value 是否可以转换成 long long 类型
         if (isSdsRepresentableAsLongLong(value,&llval) == C_OK) {
             uint8_t success = 0;
+            // 往 intset 中添加元素
             subject->ptr = intsetAdd(subject->ptr,llval,&success);
             if (success) {
-                /* Convert to regular set when the intset contains
-                 * too many entries. */
+                /*
+                 * 如果元素太多，则会转换成 hashtable 来存储。
+                 * todo：如何 intset 集合中的元素 > server.set_max_intset_entries(配置文件中配置)则转换成 hashtable 存储
+                 */
                 if (intsetLen(subject->ptr) > server.set_max_intset_entries)
+                    // 重新装换成 hashtable
                     setTypeConvert(subject,OBJ_ENCODING_HT);
                 return 1;
             }
         } else {
-            /* Failed to get integer from object, convert to regular set. */
+            /**
+             * todo：无法从对象中获取整数，则会将 intset 装换成 hashtable
+             */
             setTypeConvert(subject,OBJ_ENCODING_HT);
 
-            /* The set *was* an intset and this value is not integer
-             * encodable, so dictAdd should always work. */
+            /*
+             * The set *was* an intset and this value is not integer
+             * encodable, so dictAdd should always work.
+             */
             serverAssert(dictAdd(subject->ptr,sdsdup(value),NULL) == DICT_OK);
             return 1;
         }
@@ -229,9 +250,9 @@ unsigned long setTypeSize(const robj *subject) {
     }
 }
 
-/* Convert the set to specified encoding. The resulting dict (when converting
- * to a hash table) is presized to hold the number of elements in the original
- * set. */
+/*
+ * 将集合转换为指定的编码。 由此产生的字典（转换到散列表时）被预先设定为保存原始元素的数量设置。
+ */
 void setTypeConvert(robj *setobj, int enc) {
     setTypeIterator *si;
     serverAssertWithInfo(NULL,setobj,setobj->type == OBJ_SET &&
@@ -245,7 +266,7 @@ void setTypeConvert(robj *setobj, int enc) {
         /* Presize the dict to avoid rehashing */
         dictExpand(d,intsetLen(setobj->ptr));
 
-        /* To add the elements we extract integers and create redis objects */
+        /* 要添加元素，我们提取整数并创建redis对象 */
         si = setTypeInitIterator(setobj);
         while (setTypeNext(si,&element,&intele) != -1) {
             element = sdsfromlonglong(intele);
@@ -261,22 +282,34 @@ void setTypeConvert(robj *setobj, int enc) {
     }
 }
 
+/**
+ * 这个是往集合中添加元素的命令
+ *
+ * @param c 客户端
+ */
 void saddCommand(client *c) {
     robj *set;
     int j, added = 0;
 
     set = lookupKeyWrite(c->db,c->argv[1]);
+    // 如果当前集合不存在则创建该集合
     if (set == NULL) {
+        // 使用指定的名称创建一个 set 集合
+        // todo: 这里是 set 底层结构创建的地方
         set = setTypeCreate(c->argv[2]->ptr);
+        // 往 db 中添加该集合
         dbAdd(c->db,c->argv[1],set);
     } else {
+        // 如果不是 set 类型
         if (set->type != OBJ_SET) {
+            // 抛出异常
             addReply(c,shared.wrongtypeerr);
             return;
         }
     }
-
+    // 往集合中添加元素
     for (j = 2; j < c->argc; j++) {
+        // 循环将每个值都添加到指定的 set 里面
         if (setTypeAdd(set,c->argv[j]->ptr)) added++;
     }
     if (added) {

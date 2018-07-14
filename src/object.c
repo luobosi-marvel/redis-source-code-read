@@ -224,10 +224,16 @@ robj *createZiplistObject(void) {
     o->encoding = OBJ_ENCODING_ZIPLIST;
     return o;
 }
-
+/**
+ * 创建一个 set 集合对象
+ * @return
+ */
 robj *createSetObject(void) {
+    // 创建一个字典
     dict *d = dictCreate(&setDictType,NULL);
+    // 创建一个 SET 对象
     robj *o = createObject(OBJ_SET,d);
+    // 将编码格式改成 hashtable
     o->encoding = OBJ_ENCODING_HT;
     return o;
 }
