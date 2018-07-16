@@ -173,6 +173,7 @@ robj *lookupKeyWriteOrReply(client *c, robj *key, robj *reply) {
  */
 void dbAdd(redisDb *db, robj *key, robj *val) {
     sds copy = sdsdup(key->ptr);
+    // 这里的 key 会装换成 sds 存储起来
     int retval = dictAdd(db->dict, copy, val);
 
     serverAssertWithInfo(NULL,key,retval == DICT_OK);
@@ -205,20 +206,30 @@ void dbOverwrite(redisDb *db, robj *key, robj *val) {
     }
 }
 
-/* High level Set operation. This function can be used in order to set
+/*
+ * High level Set operation. This function can be used in order to set
  * a key, whatever it was existing or not, to a new object.
  *
  * 1) The ref count of the value object is incremented.
  * 2) clients WATCHing for the destination key notified.
  * 3) The expire time of the key is reset (the key is made persistent).
  *
- * All the new keys in the database should be craeted via this interface. */
+ * All the new keys in the database should be craeted via this interface.
+ *
+ * 高级设置操作。 可以使用此功能进行设置
+ * 一个 key ，无论它是否存在，都是一个新对象。
+ * 1）值对象的引用计数递增。
+ * 2）客户端WATCHing通知目的地密钥。
+ * 3）重置 key 的过期时间（key是持久的）。
+ * 应通过此接口创建数据库中的所有新 key。
+ */
 void setKey(redisDb *db, robj *key, robj *val) {
     if (lookupKeyWrite(db,key) == NULL) {
         dbAdd(db,key,val);
     } else {
         dbOverwrite(db,key,val);
     }
+    // 级数引用 + 1
     incrRefCount(val);
     removeExpire(db,key);
     signalModifiedKey(db,key);

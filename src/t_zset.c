@@ -1166,6 +1166,7 @@ void zsetConvert(robj *zobj, int encoding) {
         zfree(zobj->ptr);
         zobj->ptr = zs;
         zobj->encoding = OBJ_ENCODING_SKIPLIST;
+        // 将有序集合底层结构的编码格式转换成 skiplist 跳跃表
     } else if (zobj->encoding == OBJ_ENCODING_SKIPLIST) {
         unsigned char *zl = ziplistNew();
 

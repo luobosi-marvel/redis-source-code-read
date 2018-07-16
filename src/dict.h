@@ -118,6 +118,12 @@ typedef void (dictScanBucketFunction)(void *privdata, dictEntry **bucketref);
     if ((d)->type->valDestructor) \
         (d)->type->valDestructor((d)->privdata, (entry)->v.val)
 
+/**
+ * todo: dict 设置一个 value
+ * d 字典类型
+ * entry dictEntry 对象
+ * _val_ 任意对象
+ */
 #define dictSetVal(d, entry, _val_) do { \
     if ((d)->type->valDup) \
         (entry)->v.val = (d)->type->valDup((d)->privdata, _val_); \

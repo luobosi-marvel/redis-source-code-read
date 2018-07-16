@@ -187,6 +187,8 @@ int sortCompare(const void *s1, const void *s2) {
 /*
  * The SORT command is the most complex command in Redis.
  * Warning: this code is optimized for speed and a bit less for readability
+ *
+ * 这个命令比较复杂，为了性能导致可读性不好
  */
 void sortCommand(client *c) {
     list *operations;
@@ -227,9 +229,11 @@ void sortCommand(client *c) {
     else
         sortval = createQuicklistObject();
 
-    /* The SORT command has an SQL-alike syntax, parse it */
+    /* SORT命令具有类似SQL的语法，解析它 */
     while (j < c->argc) {
         int leftargs = c->argc - j - 1;
+        // C 中 strcasecmp 比较两个字符串是否相等，忽略大小写
+        // 若参数s1 和s2 字符串相同则返回0。s1 长度大于s2 长度则返回大于0 的值，s1 长度若小于s2 长度则返回小于0 的值。
         if (!strcasecmp(c->argv[j]->ptr, "asc")) {
             desc = 0;
         } else if (!strcasecmp(c->argv[j]->ptr, "desc")) {
@@ -250,8 +254,11 @@ void sortCommand(client *c) {
             j++;
         } else if (!strcasecmp(c->argv[j]->ptr, "by") && leftargs >= 1) {
             sortby = c->argv[j + 1];
-            /* If the BY pattern does not contain '*', i.e. it is constant,
-             * we don't need to sort nor to lookup the weight keys. */
+            /*
+             * If the BY pattern does not contain '*', i.e. it is constant,
+             * we don't need to sort nor to lookup the weight keys.
+             * 如果BY模式不包含'*'，即它是常量，我们不需要排序也不需要查找权重键。
+             */
             if (strchr(c->argv[j + 1]->ptr, '*') == NULL) {
                 dontsort = 1;
             } else {
@@ -265,7 +272,9 @@ void sortCommand(client *c) {
             }
             j++;
         } else if (!strcasecmp(c->argv[j]->ptr, "get") && leftargs >= 1) {
+            // todo: 在集群模式下 sort 排序不支持 get 操作
             if (server.cluster_enabled) {
+                // 在群集模式下拒绝SORT的GET选项。
                 addReplyError(c, "GET option of SORT denied in Cluster mode.");
                 syntax_error++;
                 break;
@@ -282,33 +291,40 @@ void sortCommand(client *c) {
         j++;
     }
 
-    /* Handle syntax errors set during options parsing. */
+    /* 处理选项解析期间设置的语法错误。1
+     * */
     if (syntax_error) {
         decrRefCount(sortval);
         listRelease(operations);
         return;
     }
 
-    /* When sorting a set with no sort specified, we must sort the output
+    /*
+     * When sorting a set with no sort specified, we must sort the output
      * so the result is consistent across scripting and replication.
      *
      * The other types (list, sorted set) will retain their native order
      * even if no sort order is requested, so they remain stable across
-     * scripting and replication. */
-    if (dontsort &&
-        sortval->type == OBJ_SET &&
-        (storekey || c->flags & CLIENT_LUA)) {
+     * scripting and replication.
+     * 排序未指定排序的集合时，我们必须对输出进行排序所以结果在脚本和复制中是一致的。
+     * 其他类型（列表，排序集）将保留其本机顺序即使没有请求排序顺序，它们也保持稳定脚本和复制。
+     *
+     * 强制使用 alpha 进行排序
+     */
+    if (dontsort && sortval->type == OBJ_SET && (storekey || c->flags & CLIENT_LUA)) {
         /* Force ALPHA sorting */
         dontsort = 0;
         alpha = 1;
         sortby = NULL;
     }
 
-    /* Destructively convert encoded sorted sets for SORT. */
+    /* 破坏性地转换SORT的编码有序集。 */
     if (sortval->type == OBJ_ZSET)
+        // 将 zset 的底层结构转换成 skiplist 跳跃表
         zsetConvert(sortval, OBJ_ENCODING_SKIPLIST);
 
     /* Objtain the length of the object to sort. */
+    // todo: sort 命令 可以对 list、set、zset 列表和集合进行排序
     switch (sortval->type) {
         case OBJ_LIST:
             vectorlen = listTypeLength(sortval);
@@ -325,6 +341,7 @@ void sortCommand(client *c) {
     }
 
     /* Perform LIMIT start,count sanity checking. */
+    // 检查 limit 参数
     start = (limit_start < 0) ? 0 : limit_start;
     end = (limit_count < 0) ? vectorlen - 1 : start + limit_count - 1;
     if (start >= vectorlen) {
@@ -333,7 +350,8 @@ void sortCommand(client *c) {
     }
     if (end >= vectorlen) end = vectorlen - 1;
 
-    /* Whenever possible, we load elements into the output array in a more
+    /*
+     * Whenever possible, we load elements into the output array in a more
      * direct way. This is possible if:
      *
      * 1) The object to sort is a sorted set or a list (internally sorted).
@@ -342,17 +360,18 @@ void sortCommand(client *c) {
      * In this special case, if we have a LIMIT option that actually reduces
      * the number of elements to fetch, we also optimize to just load the
      * range we are interested in and allocating a vector that is big enough
-     * for the selected range length. */
-    if ((sortval->type == OBJ_ZSET || sortval->type == OBJ_LIST) &&
-        dontsort &&
-        (start != 0 || end != vectorlen - 1)) {
+     * for the selected range length.
+     */
+    if ((sortval->type == OBJ_ZSET || sortval->type == OBJ_LIST) && dontsort && (start != 0 || end != vectorlen - 1)) {
         vectorlen = end - start + 1;
     }
 
     /* Load the sorting vector with all the objects to sort */
+    // 给要排序的对象分配内存
     vector = zmalloc(sizeof(redisSortObject) * vectorlen);
     j = 0;
 
+    // 如果排序类型是 list 且没有指定 dontsort
     if (sortval->type == OBJ_LIST && dontsort) {
         /* Special handling for a list, if 'dontsort' is true.
          * This makes sure we return elements in the list original
@@ -378,9 +397,12 @@ void sortCommand(client *c) {
             end -= start;
             start = 0;
         }
+        // 如果排序的是 list
     } else if (sortval->type == OBJ_LIST) {
+        // 拿到 list 的迭代器
         listTypeIterator *li = listTypeInitIterator(sortval, 0, LIST_TAIL);
         listTypeEntry entry;
+        // 给 redisSortObject 对象里面的元素赋值
         while (listTypeNext(li, &entry)) {
             vector[j].obj = listTypeGet(&entry);
             vector[j].u.score = 0;

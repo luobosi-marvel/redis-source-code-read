@@ -313,7 +313,9 @@ static void _dictRehashStep(dict *d) {
     if (d->iterators == 0) dictRehash(d, 1);
 }
 
-/* 往 hash表里面添加一个元素 */
+/*
+ * 往 hash表里面添加一个元素
+ */
 int dictAdd(dict *d, void *key, void *val) {
     // 先添加一个 key ，这里会判断当前 key 应该存在的位置
     // 还有当前 ht 是否正在扩容
