@@ -342,29 +342,33 @@ void incrDecrCommand(client *c, long long incr) {
     long long value, oldvalue;
     robj *o, *new;
 
+    // 查看 key 是否已经存在 db 中
     o = lookupKeyWrite(c->db,c->argv[1]);
+    // 如果存在，且类型是 string ，则直接返回
     if (o != NULL && checkType(c,o,OBJ_STRING)) return;
+    // 如果不能讲 key 的值装换成 long long 类型，则直接返回
     if (getLongLongFromObjectOrReply(c,o,&value,NULL) != C_OK) return;
-
+    // oldvalue 用来存储旧值
     oldvalue = value;
     if ((incr < 0 && oldvalue < 0 && incr < (LLONG_MIN-oldvalue)) ||
         (incr > 0 && oldvalue > 0 && incr > (LLONG_MAX-oldvalue))) {
+        // todo: 增量或减量会溢出
         addReplyError(c,"increment or decrement would overflow");
         return;
     }
     value += incr;
 
     if (o && o->refcount == 1 && o->encoding == OBJ_ENCODING_INT &&
-        (value < 0 || value >= OBJ_SHARED_INTEGERS) &&
-        value >= LONG_MIN && value <= LONG_MAX)
-    {
+        (value < 0 || value >= OBJ_SHARED_INTEGERS) && value >= LONG_MIN && value <= LONG_MAX) {
         new = o;
         o->ptr = (void*)((long)value);
     } else {
         new = createStringObjectFromLongLongForValue(value);
         if (o) {
+            // 覆盖
             dbOverwrite(c->db,c->argv[1],new);
         } else {
+            // 直接添加
             dbAdd(c->db,c->argv[1],new);
         }
     }

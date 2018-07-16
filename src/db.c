@@ -160,10 +160,17 @@ robj *lookupKeyWriteOrReply(client *c, robj *key, robj *reply) {
     return o;
 }
 
-/* Add the key to the DB. It's up to the caller to increment the reference
+/*
+ * Add the key to the DB. It's up to the caller to increment the reference
  * counter of the value if needed.
  *
- * The program is aborted if the key already exists. */
+ * The program is aborted if the key already exists.
+ *
+ * 将 key 添加到DB。 由调用者增加引用
+ * 如果需要，可以计算价值。
+ *
+ * 如果 key 已存在，程序将中止。
+ */
 void dbAdd(redisDb *db, robj *key, robj *val) {
     sds copy = sdsdup(key->ptr);
     int retval = dictAdd(db->dict, copy, val);
@@ -175,11 +182,15 @@ void dbAdd(redisDb *db, robj *key, robj *val) {
     if (server.cluster_enabled) slotToKeyAdd(key);
 }
 
-/* Overwrite an existing key with a new value. Incrementing the reference
+/*
+ * 原子增会调用
+ *
+ * Overwrite an existing key with a new value. Incrementing the reference
  * count of the new value is up to the caller.
  * This function does not modify the expire time of the existing key.
  *
- * The program is aborted if the key was not already present. */
+ * The program is aborted if the key was not already present.
+ */
 void dbOverwrite(redisDb *db, robj *key, robj *val) {
     dictEntry *de = dictFind(db->dict,key->ptr);
 
