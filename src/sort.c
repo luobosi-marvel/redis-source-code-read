@@ -410,6 +410,7 @@ void sortCommand(client *c) {
             j++;
         }
         listTypeReleaseIterator(li);
+        // 排序的结构是 set
     } else if (sortval->type == OBJ_SET) {
         setTypeIterator *si = setTypeInitIterator(sortval);
         sds sdsele;
@@ -421,12 +422,14 @@ void sortCommand(client *c) {
         }
         setTypeReleaseIterator(si);
     } else if (sortval->type == OBJ_ZSET && dontsort) {
-        /* Special handling for a sorted set, if 'dontsort' is true.
+        /*
+         * Special handling for a sorted set, if 'dontsort' is true.
          * This makes sure we return elements in the sorted set original
          * ordering, accordingly to DESC / ASC options.
          *
          * Note that in this case we also handle LIMIT here in a direct
-         * way, just getting the required range, as an optimization. */
+         * way, just getting the required range, as an optimization.
+         */
 
         zset *zs = sortval->ptr;
         zskiplist *zsl = zs->zsl;
