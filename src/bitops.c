@@ -35,12 +35,17 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * 0x55555555  的二进制为 0101  0101  0101  0101  0101  0101  0101  0101， 奇位为1， 偶数为0
- * 0x33333333  的二进制为 0011  0011  0011  0011  0011  0011  0011  0011
- * 0x0F0F0F0F 的二级制为 0000  1111  0000  1111  0000  1111  0000  1111
- * 0x01010101  的二进制为 0000  0001  0000  0001  0000  0001  0000  0001， 每个字节最后一位是1
+ * 1431655765 = 0x55555555  的二进制为 0101  0101  0101  0101  0101  0101  0101  0101， 奇位为1， 偶数为0
+ * 858993459 =  0x33333333  的二进制为 0011  0011  0011  0011  0011  0011  0011  0011
+ * 252645135 =  0x0F0F0F0F 的二级制为 0000  1111  0000  1111  0000  1111  0000  1111
+ * 16843009 =   0x01010101  的二进制为 0000  0001  0000  0001  0000  0001  0000  0001， 每个字节最后一位是1
  *
- *
+ * 注意几个方法：
+ * setbitCommand()          setbit <bitarray> <offset> <value>
+ * getbitCommand()          getbit <bitarray> <offset>
+ * bitcountCommand()        统计二进制数组中有多少个 1
+ *      - redisPopcount()
+ * bitop()                  进行一些逻辑操作 & | ! 操作
  */
 
 
@@ -53,6 +58,9 @@
  * 使用输入字符串长度最大512 MB。
  * 计算非 0 的个数
  *
+ * 这里一次性可以计算多个位，但是位数并不是无限添加的，一旦循环中处理的位数组
+ * 的大小超过了缓存的大小，这种优化效果就会降低并最终消失。
+ *
  * @param s 字节数组
  * @param count 字节个数
  */
@@ -60,6 +68,7 @@ size_t redisPopcount(void *s, long count) {
     size_t bits = 0;
     unsigned char *p = s;
     uint32_t *p4;
+    // 这里表示 8bit 中 1 出现的所有情况
     static const unsigned char bitsinbyte[256] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,
                                                      4,4,5,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,
                                                      4,5,4,5,5,6,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,
@@ -71,13 +80,16 @@ size_t redisPopcount(void *s, long count) {
                                                      4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8};
 
     /* Count initial bytes not aligned to 32 bit. 计数初始字节未对齐到32位。 count 在这里表示循环的次数 */
-    while((unsigned long)p & 3 && count) {
+    // 这里只能计算最后两位不为 0 的值
+    while((unsigned long)p & 3 && count) { // 这里和 3 &  3 = 0000 0011 也就是取每个数的后两位
+        // 这里相当于给 bits 赋初始值
         bits += bitsinbyte[*p++];
         count--;
     }
 
-    /* Count bits 28 bytes at a time */
+    /* Count bits 28 bytes at a time 一次计数 28 个字节？ */
     p4 = (uint32_t*)p;
+    // 这里是 count >= 28
     while(count>=28) {
         uint32_t aux1, aux2, aux3, aux4, aux5, aux6, aux7;
 
@@ -89,7 +101,10 @@ size_t redisPopcount(void *s, long count) {
         aux6 = *p4++;
         aux7 = *p4++;
         count -= 28;
-
+        // 0x55555555  的二进制为 0101  0101  0101  0101  0101  0101  0101  0101， 奇位为1， 偶数为0
+        // 0x33333333  的二进制为 0011  0011  0011  0011  0011  0011  0011  0011
+        // 0x0F0F0F0F  的二级制为 0000  1111  0000  1111  0000  1111  0000  1111
+        // 0x01010101  的二进制为 0000  0001  0000  0001  0000  0001  0000  0001， 每个字节最后一位是1
         aux1 = aux1 - ((aux1 >> 1) & 0x55555555);
         aux1 = (aux1 & 0x33333333) + ((aux1 >> 2) & 0x33333333);
         aux2 = aux2 - ((aux2 >> 1) & 0x55555555);
@@ -112,7 +127,7 @@ size_t redisPopcount(void *s, long count) {
                     ((aux6 + (aux6 >> 4)) & 0x0F0F0F0F) +
                     ((aux7 + (aux7 >> 4)) & 0x0F0F0F0F))* 0x01010101) >> 24;
     }
-    /* Count the remaining bytes. */
+    /* 计算剩下的不足的 28 个字节中 1 的个数 */
     p = (unsigned char*)p4;
     while(count--) bits += bitsinbyte[*p++];
     return bits;
@@ -517,7 +532,8 @@ robj *lookupStringForBitCommand(client *c, size_t maxbit) {
     return o;
 }
 
-/* Return a pointer to the string object content, and stores its length
+/*
+ * Return a pointer to the string object content, and stores its length
  * in 'len'. The user is required to pass (likely stack allocated) buffer
  * 'llbuf' of at least LONG_STR_SIZE bytes. Such a buffer is used in the case
  * the object is integer encoded in order to provide the representation
@@ -529,7 +545,8 @@ robj *lookupStringForBitCommand(client *c, size_t maxbit) {
  * the length of such buffer.
  *
  * If the source object is NULL the function is guaranteed to return NULL
- * and set 'len' to 0. */
+ * and set 'len' to 0.
+ */
 unsigned char *getObjectReadOnlyString(robj *o, long *len, char *llbuf) {
     serverAssert(o->type == OBJ_STRING);
     unsigned char *p = NULL;
@@ -537,7 +554,9 @@ unsigned char *getObjectReadOnlyString(robj *o, long *len, char *llbuf) {
     /* Set the 'p' pointer to the string, that can be just a stack allocated
      * array if our string was integer encoded. */
     if (o && o->encoding == OBJ_ENCODING_INT) {
+        // 这里强转
         p = (unsigned char*) llbuf;
+        // 将 long long 转成字符串
         if (len) *len = ll2string(llbuf,LONG_STR_SIZE,(long)o->ptr);
     } else if (o) {
         p = (unsigned char*) o->ptr;
@@ -556,10 +575,10 @@ void setbitCommand(client *c) {
     ssize_t byte, bit;
     int byteval, bitval;
     long on;
-
+    // offset 参数判断
     if (getBitOffsetFromArgument(c,c->argv[2],&bitoffset,0,0) != C_OK)
         return;
-
+    // value 的判断
     if (getLongFromObjectOrReply(c,c->argv[3],&on,err) != C_OK)
         return;
 
@@ -573,6 +592,7 @@ void setbitCommand(client *c) {
 
     /* Get current values */
     byte = bitoffset >> 3;
+    // 获取 offset 位置上的值
     byteval = ((uint8_t*)o->ptr)[byte];
     bit = 7 - (bitoffset & 0x7);
     bitval = byteval & (1 << bit);
@@ -796,12 +816,14 @@ void bitopCommand(client *c) {
 void bitcountCommand(client *c) {
     robj *o;
     long start, end, strlen;
+    // p 指向一下字符数组
     unsigned char *p;
     char llbuf[LONG_STR_SIZE];
 
     /* 查找，检查类型，并为非现有 key 返回0。 */
     if ((o = lookupKeyReadOrReply(c,c->argv[1],shared.czero)) == NULL ||
         checkType(c,o,OBJ_STRING)) return;
+    // 给 p 赋值
     p = getObjectReadOnlyString(o,&strlen,llbuf);
 
     /* Parse start/end range if any. */

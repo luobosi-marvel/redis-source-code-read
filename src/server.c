@@ -2517,6 +2517,7 @@ int processCommand(client *c) {
          c->cmd->proc == pingCommand))
     {
         flagTransaction(c);
+
         if (server.aof_last_write_status == C_OK)
             addReply(c, shared.bgsaveerr);
         else
