@@ -135,7 +135,7 @@ size_t redisPopcount(void *s, long count) {
 
 /* Return the position of the first bit set to one (if 'bit' is 1) or
  * zero (if 'bit' is 0) in the bitmap starting at 's' and long 'count' bytes.
- *
+ * todo: 补充一篇文章
  * The function is guaranteed to return a value >= 0 if 'bit' is 0 since if
  * no zero bit is found, it returns count*8 assuming the string is zero
  * padded on the right. However if 'bit' is 1 it is possible that there is
