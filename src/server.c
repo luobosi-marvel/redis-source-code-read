@@ -1396,8 +1396,8 @@ void createSharedObjects(void) {
 }
 
 /**
- *用于设置默认值，并读取配置文件 redis.conf，若用户配置某个参数，则用该参数值替换默认值
- * 
+ * 用于设置默认值，并读取配置文件 redis.conf，若用户配置某个参数，则用该参数值替换默认值
+ * todo: 读取 redis.conf
  * [initServerConfig description]
  */
 void initServerConfig(void) {
@@ -1574,7 +1574,7 @@ void initServerConfig(void) {
      * redis.conf using the rename-command directive.
      *
      * 命令表-我们可以在这里初始化它，因为它是初始配置的一部分，
-     * 命令名称可以通过 redis.conf 使用rename-command 指令修改
+     * todo: 命令名称可以通过 redis.conf 使用 rename-command 指令修改
      */
     server.commands = dictCreate(&commandTableDictType,NULL);
     server.orig_commands = dictCreate(&commandTableDictType,NULL);
@@ -1592,6 +1592,7 @@ void initServerConfig(void) {
     server.pexpireCommand = lookupCommandByCString("pexpire");
     server.xclaimCommand = lookupCommandByCString("xclaim");
 
+    // todo: slowlog 慢日志
     /* Slow log 和日志相关的配置 */
     // slow log 时间限制（纪录）默认值是 10000
     server.slowlog_log_slower_than = CONFIG_DEFAULT_SLOWLOG_LOG_SLOWER_THAN;

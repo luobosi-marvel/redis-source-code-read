@@ -6,6 +6,7 @@
 
 /*-----------------------------------------------------------------------------
  * Config file name-value maps.这里保存了 redis.conf 的配置信息
+ * todo: redis.conf
  * todo: 配置文件 key-value 映射
  *----------------------------------------------------------------------------*/
 
@@ -896,6 +897,7 @@ void configSetCommand(client *c) {
         if (ll > orig_value) {
             adjustOpenFilesLimit();
             if (server.maxclients != ll) {
+                // 操作系统无法处理指定数量的客户端，请尝试使用
                 addReplyErrorFormat(c,"The operating system is not able to handle the specified number of clients, try with %d", server.maxclients);
                 server.maxclients = orig_value;
                 return;
