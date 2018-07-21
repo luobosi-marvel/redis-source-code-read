@@ -37,16 +37,24 @@
 
 struct clusterNode;
 
-/* clusterLink encapsulates everything needed to talk with a remote node. */
+/*
+ * clusterLink encapsulates everything needed to talk with a remote node.
+ * clusterLink封装了与远程节点通信所需的一切。
+ */
 typedef struct clusterLink {
+    // 连接的创建时间
     mstime_t ctime;             /* Link creation time */
+    // TCP 套接字描述符
     int fd;                     /* TCP socket file descriptor */
+    // 输出缓冲区，保存着等待发送给其他节点的消息
     sds sndbuf;                 /* Packet send buffer */
+    // 输入缓冲区，保存着从其它节点受到的消息
     sds rcvbuf;                 /* Packet reception buffer */
+    // 与这个连接相关联的节点，如果没有的话就为 null
     struct clusterNode *node;   /* Node related to this link if any, or NULL */
 } clusterLink;
 
-/* Cluster node flags and macros. */
+/* Cluster node flags and macros. 群集节点标志和宏。 */
 #define CLUSTER_NODE_MASTER 1     /* The node is a master */
 #define CLUSTER_NODE_SLAVE 2      /* The node is a slave */
 #define CLUSTER_NODE_PFAIL 4      /* Failure? Need acknowledge */
@@ -106,13 +114,27 @@ typedef struct clusterNodeFailReport {
     mstime_t time;             /* Time of the last report from this node. */
 } clusterNodeFailReport;
 
+/**
+ * clusterState.slots 和 clusterNode.slots 的区别
+ *
+ * clusterState.slots 数组记录了集群中所有槽的指派信息，
+ * 而 clusterNode.slots 数组只记录了 clusterNode 结构所代表的节点的槽指派信息
+ *
+ */
+
+/**
+ * 记录节点的槽指派信息
+ */
 typedef struct clusterNode {
     mstime_t ctime; /* Node object creation time. */
     char name[CLUSTER_NAMELEN]; /* Node name, hex string, sha1-size */
     int flags;      /* CLUSTER_NODE_... */
     uint64_t configEpoch; /* Last configEpoch observed for this node */
+    // slots 是一个二进制位数组，长度为 16384/8=2048 bit。共包含 16384 个二进制位
+    // 如果 slots 数组在索引 i 上的二进制位的值为 1，则表示该节点负责处理槽i
     unsigned char slots[CLUSTER_SLOTS/8]; /* slots handled by this node */
     int numslots;   /* Number of slots handled by this node */
+    // 如果这是 master，则记录了 slaves 的数量
     int numslaves;  /* Number of slave nodes, if this is a master */
     struct clusterNode **slaves; /* pointers to slave nodes */
     struct clusterNode *slaveof; /* pointer to the master node. Note that it
@@ -140,7 +162,14 @@ typedef struct clusterState {
     int size;             /* Num of master nodes with at least one slot */
     dict *nodes;          /* Hash table of name -> clusterNode structures */
     dict *nodes_black_list; /* Nodes we don't re-add for a few seconds. */
+    /*
+     * 如果节点没有在自己的数据库里找到key，那么节点会检查自己的 clusterState.migrating_slots_to,
+     * 查看 key 所属的槽 i 是否正在进行迁移，如果槽i 在迁移，则向客户端发送一个 ask 命令
+     *
+     * 该数组记录当前节点正在迁移至其它节点的槽
+     */
     clusterNode *migrating_slots_to[CLUSTER_SLOTS];
+    // 记录了当前节点正在从其它节点导入的槽
     clusterNode *importing_slots_from[CLUSTER_SLOTS];
     clusterNode *slots[CLUSTER_SLOTS];
     uint64_t slots_keys_count[CLUSTER_SLOTS];
