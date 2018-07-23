@@ -1239,6 +1239,12 @@ struct redisServer {
                                    xor of NOTIFY_... flags. */
     /* Cluster */
     int cluster_enabled;      /* Is cluster enabled? */
+    /*
+     * todo: cluster_node_timeout 该参数对消息发送的节点数量影响非常大。
+     * 当我们带宽资源紧张时，可以适当调大这个参数，降低带宽占用率。
+     *
+     * 过度调大 cluster_node_timeout 会影响消息交换的频率从而影响故障转移、槽信息更新、新节点发现的速度
+     */
     mstime_t cluster_node_timeout; /* Cluster node timeout. */
     char *cluster_configfile; /* Cluster auto-generated config file name. */
     struct clusterState *cluster;  /* State of the cluster */

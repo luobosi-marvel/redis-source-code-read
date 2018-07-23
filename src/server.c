@@ -1198,6 +1198,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     run_with_period(1000) replicationCron();
 
     /* Run the Redis Cluster cron. */
+    // todo: 每隔 100ms 执行 clusterCron() 函数
     run_with_period(100) {
         if (server.cluster_enabled) clusterCron();
     }
@@ -2004,9 +2005,13 @@ void initServer(void) {
     server.repl_good_slaves_count = 0;
     updateCachedTime();
 
-    /* Create the timer callback, this is our way to process many background
+    /*
+     * Create the timer callback, this is our way to process many background
      * operations incrementally, like clients timeout, eviction of unaccessed
-     * expired keys and so forth. */
+     * expired keys and so forth.
+     *
+     * 设置时间事件处理函数 serverCron()
+     */
     if (aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR) {
         serverPanic("Can't create event loop timers.");
         exit(1);
@@ -2059,7 +2064,7 @@ void initServer(void) {
         server.maxmemory = 3072LL*(1024*1024); /* 3 GB */
         server.maxmemory_policy = MAXMEMORY_NO_EVICTION;
     }
-
+    // todo: 初始化 server.cluster
     if (server.cluster_enabled) clusterInit();
     replicationScriptCacheInit();
     scriptingInit(1);
@@ -3834,7 +3839,13 @@ int redisIsSupervised(int mode) {
     return 0;
 }
 
-
+/**
+ * todo: 服务端 main 方法
+ *
+ * @param argc
+ * @param argv
+ * @return
+ */
 int main(int argc, char **argv) {
     struct timeval tv;
     int j;
@@ -3997,7 +4008,7 @@ int main(int argc, char **argv) {
     server.supervised = redisIsSupervised(server.supervised_mode);
     int background = server.daemonize && !server.supervised;
     if (background) daemonize();
-    // 该函数主要对 server 进行初始化
+    // todo: 对 server 进行初始化
     initServer();
     if (background || server.pidfile) createPidFile();
     redisSetProcTitle(argv[0]);
@@ -4033,8 +4044,13 @@ int main(int argc, char **argv) {
         serverLog(LL_WARNING,"WARNING: You specified a maxmemory value that is less than 1MB (current value is %llu bytes). Are you sure this is what you really want?", server.maxmemory);
     }
 
+    /*
+     * 在进入事件循环之前，为服务器设置每次事件循环之前都要执行的一个函数 beforeSleep()
+     * 该函数一开始就会执行集群的 clusterBeforeSleep() 函数
+     */
     aeSetBeforeSleepProc(server.el,beforeSleep);
     aeSetAfterSleepProc(server.el,afterSleep);
+    // 进入事件循环，一开始就会执行之前设置的 beforeSleep() 函数，之后就等待事件发生，处理就绪的事件。
     aeMain(server.el);
     aeDeleteEventLoop(server.el);
     return 0;

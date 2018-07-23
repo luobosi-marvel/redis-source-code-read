@@ -208,23 +208,44 @@ typedef struct clusterState {
  * to the first node, using the getsockname() function. Then we'll use this
  * address for all the next messages. */
 typedef struct {
+    // 节点的名字
     char nodename[CLUSTER_NAMELEN];
+    // 最后一次向该节点发送 PING 消息的时间戳
     uint32_t ping_sent;
+    // 最后一次从该节点接收到 PONG 消息的时间戳
     uint32_t pong_received;
+    // 节点的 IP 地址
     char ip[NET_IP_STR_LEN];  /* IP address last time it was seen */
+    // 节点的端口号
     uint16_t port;              /* base port last time it was seen */
     uint16_t cport;             /* cluster port last time it was seen */
+    // 节点的标识值
     uint16_t flags;             /* node->flags copy */
     uint32_t notused1;
 } clusterMsgDataGossip;
 
+/**
+ * 这里就是 FAIL 的正文
+ * todo: 为什么 FAIL 不使用 Gossip 协议？
+ * 在集群的节点数量比较大的情况单纯使用 Gossip 协议来传播节点的已下线信息会给
+ * 节点的信息更新带来一定延迟，因为 Gossip 协议消息通常需要一段时间才能传播至
+ * 整个集群，而发送 FAIL 消息可以让集群里的所有节点立即知道某个主节点已下线，从而
+ * 尽快判断是否需要将集群标记为下线，又或者对下线主节点进行故障转移。
+ */
 typedef struct {
+    /*
+     * todo: 因为集群里的所有节点都是独一无二的名字，
+     * 所以 FAIL 消息里面只需要保存下线节点的名字
+     * 接收到消息的节点就可以根据这个名字来判断是哪个节点下线了。
+     */
     char nodename[CLUSTER_NAMELEN];
 } clusterMsgDataFail;
 
 typedef struct {
     uint32_t channel_len;
     uint32_t message_len;
+    // 定义为 8 字节只是为了对齐其他消息结构
+    // 实际的长度有保存的内容决定
     unsigned char bulk_data[8]; /* 8 bytes just as placeholder. */
 } clusterMsgDataPublish;
 
@@ -241,9 +262,13 @@ typedef struct {
     unsigned char bulk_data[3]; /* 3 bytes just as placeholder. */
 } clusterMsgModule;
 
+/**
+ * 消息的正文
+ */
 union clusterMsgData {
-    /* PING, MEET and PONG */
+    /* PING, MEET and PONG 消息的正文 */
     struct {
+        // 这里使用的 Gossip 协议，这几个命令中只有这三个命令使用 Gossip 协议
         /* Array of N clusterMsgDataGossip structures */
         clusterMsgDataGossip gossip[1];
     } ping;
@@ -271,28 +296,51 @@ union clusterMsgData {
 
 #define CLUSTER_PROTO_VER 1 /* Cluster bus protocol version. */
 
+/**
+ * 消息头信息
+ * 该结构中的 currentEpoch、sender、myslots 等属性纪录了发送者自身的节点信息，
+ * 接收者会根据这些信息，在自己的 clusterState.nodes 字典里找到发送者对应的
+ * clusterNode 结构，并被结构进行更新。
+ */
 typedef struct {
     char sig[4];        /* Siganture "RCmb" (Redis Cluster message bus). */
+    // 消息的长度（包括这个消息头的长度和消息正文的长度）
     uint32_t totlen;    /* Total length of this message */
+    //
     uint16_t ver;       /* Protocol version, currently set to 1. */
     uint16_t port;      /* TCP base port number. */
+    // 消息的类型
     uint16_t type;      /* Message type */
+    // 消息正文包含的节点信息数量
+    // 只在发送 MEET、PING、PONG、这三种 Gossip 协议消息时使用
     uint16_t count;     /* Only used for some kind of messages. */
+    // 发送者所处的配置纪元
     uint64_t currentEpoch;  /* The epoch accordingly to the sending node. */
+    // 如果发送者是一个主节点，那么这里纪录的是发送者的配置纪元
+    // 如果发送者是一个从节点，那么这里的是发送者正在复制的主节点的配置纪元
     uint64_t configEpoch;   /* The config epoch if it's a master, or the last
                                epoch advertised by its master if it is a
                                slave. */
     uint64_t offset;    /* Master replication offset if node is a master or
                            processed replication offset if node is a slave. */
+    // 发送者的名字（ID）
     char sender[CLUSTER_NAMELEN]; /* Name of the sender node */
+    // 发送者目前的槽指派信息
     unsigned char myslots[CLUSTER_SLOTS/8];
+    // 如果发送者是一个从节点，那么这里纪录的是发送者正在复制的主节点的名字
+    // 如果发送者是一个主节点，那么这里纪录的是 REDIS_NODE_NULL_NAME
+    //（一个 40 字节长，值全为 0 的字节数组）
     char slaveof[CLUSTER_NAMELEN];
     char myip[NET_IP_STR_LEN];    /* Sender IP, if not all zeroed. */
     char notused1[34];  /* 34 bytes reserved for future usage. */
+    // 发送者的端口号
     uint16_t cport;      /* Sender TCP cluster bus port */
+    // 发送者的标识符
     uint16_t flags;      /* Sender node flags */
+    // 发送者所处集群的状态
     unsigned char state; /* Cluster state from the POV of the sender */
     unsigned char mflags[3]; /* Message flags: CLUSTERMSG_FLAG[012]_... */
+    // 消息的正文（内容）
     union clusterMsgData data;
 } clusterMsg;
 

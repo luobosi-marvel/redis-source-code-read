@@ -426,6 +426,9 @@ void clusterUpdateMyselfFlags(void) {
     }
 }
 
+/**
+ * todo: 集群初始化函数
+ */
 void clusterInit(void) {
     int saveconf = 0;
 
@@ -519,7 +522,8 @@ void clusterInit(void) {
     clusterUpdateMyselfFlags();
 }
 
-/* Reset a node performing a soft or hard reset:
+/*
+ * Reset a node performing a soft or hard reset:
  *
  * 1) All other nodes are forget.
  * 2) All the assigned / open slots are released.
@@ -3294,10 +3298,14 @@ void clusterHandleManualFailover(void) {
 }
 
 /* -----------------------------------------------------------------------------
- * CLUSTER cron job
+ * todo: CLUSTER cron job 周期集群job
  * -------------------------------------------------------------------------- */
 
-/* This is executed 10 times every second */
+/*
+ * This is executed 10 times every second
+ *
+ * 1s 执行 10次
+ */
 void clusterCron(void) {
     dictIterator *di;
     dictEntry *de;
@@ -3839,7 +3847,8 @@ void clusterUpdateState(void) {
     }
 }
 
-/* This function is called after the node startup in order to verify that data
+/*
+ * This function is called after the node startup in order to verify that data
  * loaded from disk is in agreement with the cluster configuration:
  *
  * 1) If we find keys about hash slots we have no responsibility for, the
@@ -3860,7 +3869,9 @@ void clusterUpdateState(void) {
  *
  * The function also uses the logging facility in order to warn the user
  * about desynchronizations between the data we have in memory and the
- * cluster configuration. */
+ * cluster configuration.
+ *
+ */
 int verifyClusterConfigWithData(void) {
     int j;
     int update_config = 0;
