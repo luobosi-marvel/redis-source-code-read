@@ -57,13 +57,13 @@ typedef struct clusterLink {
 /* Cluster node flags and macros. 群集节点标志和宏。 */
 #define CLUSTER_NODE_MASTER 1     /* The node is a master */
 #define CLUSTER_NODE_SLAVE 2      /* The node is a slave */
-#define CLUSTER_NODE_PFAIL 4      /* Failure? Need acknowledge */
-#define CLUSTER_NODE_FAIL 8       /* The node is believed to be malfunctioning */
-#define CLUSTER_NODE_MYSELF 16    /* This node is myself */
-#define CLUSTER_NODE_HANDSHAKE 32 /* We have still to exchange the first ping */
-#define CLUSTER_NODE_NOADDR   64  /* We don't know the address of this node */
-#define CLUSTER_NODE_MEET 128     /* Send a MEET message to this node */
-#define CLUSTER_NODE_MIGRATE_TO 256 /* Master elegible for replica migration. */
+#define CLUSTER_NODE_PFAIL 4      /* 主管下线状态 */
+#define CLUSTER_NODE_FAIL 8       /* 客观下线状态 */
+#define CLUSTER_NODE_MYSELF 16    /* 标识自身节点 */
+#define CLUSTER_NODE_HANDSHAKE 32 /* 握手状态，未与其他节点进行消息通信 */
+#define CLUSTER_NODE_NOADDR   64  /* 无地址节点，用于第一次 meet 通信未完成或者通信失败 */
+#define CLUSTER_NODE_MEET 128     /* 需要接收 meet 消息的节点状态 */
+#define CLUSTER_NODE_MIGRATE_TO 256 /* 该节点被选中为新的主节点状态 */
 #define CLUSTER_NODE_NOFAILOVER 512 /* Slave will not try to failver. */
 #define CLUSTER_NODE_NULL_NAME "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
 

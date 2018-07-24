@@ -657,12 +657,20 @@ void clusterAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
  * Key space handling
  * -------------------------------------------------------------------------- */
 
-/* We have 16384 hash slots. The hash slot of a given key is obtained
+/*
+ * We have 16384 hash slots. The hash slot of a given key is obtained
  * as the least significant 14 bits of the crc16 of the key.
  *
  * However if the key contains the {...} pattern, only the part between
  * { and } is hashed. This may be useful in the future to force certain
- * keys to be in the same node (assuming no resharding is in progress). */
+ * keys to be in the same node (assuming no resharding is in progress).
+ *
+ * todo: 集群的时候计算 key 的hash 值方法
+ * 如果键内容包含 { } 大括号字符，则计算槽的有效部分是括号内的内容，
+ * 否则采用键的全内容计算槽
+ * 例如：cluster keyslot key:{hash_tag}:111 则只计算 hash_tag 的值，
+ * hash_tag 可以提供不同的键可以具备相同 solt 的功能，常用于 Redis IO 优化
+ */
 unsigned int keyHashSlot(char *key, int keylen) {
     int s, e; /* start-end indexes of { and } */
 
@@ -4181,37 +4189,43 @@ void clusterReplyMultiBulkSlots(client *c) {
     setDeferredMultiBulkLength(c, slot_replylen, num_masters);
 }
 
+/**
+ * cluster 命令
+ *
+ * @param c 客户端
+ */
 void clusterCommand(client *c) {
     if (server.cluster_enabled == 0) {
-        addReplyError(c,"This instance has cluster support disabled");
+        addReplyError(c, "This instance has cluster support disabled");
         return;
     }
 
-    if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr,"help")) {
+    // 如果输入的是 help 命令 则给出相应的提示
+    if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr, "help")) {
         const char *help[] = {
-"addslots <slot> [slot ...] -- Assign slots to current node.",
-"bumpepoch -- Advance the cluster config epoch.",
-"count-failure-reports <node-id> -- Return number of failure reports for <node-id>.",
-"countkeysinslot <slot> - Return the number of keys in <slot>.",
-"delslots <slot> [slot ...] -- Delete slots information from current node.",
-"failover [force|takeover] -- Promote current slave node to being a master.",
-"forget <node-id> -- Remove a node from the cluster.",
-"getkeysinslot <slot> <count> -- Return key names stored by current node in a slot.",
-"flushslots -- Delete current node own slots information.",
-"info - Return onformation about the cluster.",
-"keyslot <key> -- Return the hash slot for <key>.",
-"meet <ip> <port> [bus-port] -- Connect nodes into a working cluster.",
-"myid -- Return the node id.",
-"nodes -- Return cluster configuration seen by node. Output format:",
-"    <id> <ip:port> <flags> <master> <pings> <pongs> <epoch> <link> <slot> ... <slot>",
-"replicate <node-id> -- Configure current node as slave to <node-id>.",
-"reset [hard|soft] -- Reset current node (default: soft).",
-"set-config-epoch <epoch> - Set config epoch of current node.",
-"setslot <slot> (importing|migrating|stable|node <node-id>) -- Set slot state.",
-"slaves <node-id> -- Return <node-id> slaves.",
-"slots -- Return information about slots range mappings. Each range is made of:",
-"    start, end, master and replicas IP addresses, ports and ids",
-NULL
+                "addslots <slot> [slot ...] -- Assign slots to current node.",
+                "bumpepoch -- Advance the cluster config epoch.",
+                "count-failure-reports <node-id> -- Return number of failure reports for <node-id>.",
+                "countkeysinslot <slot> - Return the number of keys in <slot>.",
+                "delslots <slot> [slot ...] -- Delete slots information from current node.",
+                "failover [force|takeover] -- Promote current slave node to being a master.",
+                "forget <node-id> -- Remove a node from the cluster.",
+                "getkeysinslot <slot> <count> -- Return key names stored by current node in a slot.",
+                "flushslots -- Delete current node own slots information.",
+                "info - Return onformation about the cluster.",
+                "keyslot <key> -- Return the hash slot for <key>.",
+                "meet <ip> <port> [bus-port] -- Connect nodes into a working cluster.",
+                "myid -- Return the node id.",
+                "nodes -- Return cluster configuration seen by node. Output format:",
+                "    <id> <ip:port> <flags> <master> <pings> <pongs> <epoch> <link> <slot> ... <slot>",
+                "replicate <node-id> -- Configure current node as slave to <node-id>.",
+                "reset [hard|soft] -- Reset current node (default: soft).",
+                "set-config-epoch <epoch> - Set config epoch of current node.",
+                "setslot <slot> (importing|migrating|stable|node <node-id>) -- Set slot state.",
+                "slaves <node-id> -- Return <node-id> slaves.",
+                "slots -- Return information about slots range mappings. Each range is made of:",
+                "    start, end, master and replicas IP addresses, ports and ids",
+                NULL
         };
         addReplyHelp(c, help);
     } else if (!strcasecmp(c->argv[1]->ptr,"meet") && (c->argc == 4 || c->argc == 5)) {
@@ -4219,14 +4233,14 @@ NULL
         long long port, cport;
 
         if (getLongLongFromObject(c->argv[3], &port) != C_OK) {
-            addReplyErrorFormat(c,"Invalid TCP base port specified: %s",
+            addReplyErrorFormat(c, "Invalid TCP base port specified: %s",
                                 (char*)c->argv[3]->ptr);
             return;
         }
 
         if (c->argc == 5) {
             if (getLongLongFromObject(c->argv[4], &cport) != C_OK) {
-                addReplyErrorFormat(c,"Invalid TCP bus port specified: %s",
+                addReplyErrorFormat(c, "Invalid TCP bus port specified: %s",
                                     (char*)c->argv[4]->ptr);
                 return;
             }
@@ -4235,10 +4249,9 @@ NULL
         }
 
         if (clusterStartHandshake(c->argv[2]->ptr,port,cport) == 0 &&
-            errno == EINVAL)
-        {
-            addReplyErrorFormat(c,"Invalid node address specified: %s:%s",
-                            (char*)c->argv[2]->ptr, (char*)c->argv[3]->ptr);
+                errno == EINVAL) {
+            addReplyErrorFormat(c, "Invalid node address specified: %s:%s",
+                                (char*)c->argv[2]->ptr, (char*)c->argv[3]->ptr);
         } else {
             addReply(c,shared.ok);
         }
@@ -4266,8 +4279,7 @@ NULL
         clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|CLUSTER_TODO_SAVE_CONFIG);
         addReply(c,shared.ok);
     } else if ((!strcasecmp(c->argv[1]->ptr,"addslots") ||
-               !strcasecmp(c->argv[1]->ptr,"delslots")) && c->argc >= 3)
-    {
+            !strcasecmp(c->argv[1]->ptr,"delslots")) && c->argc >= 3) {
         /* CLUSTER ADDSLOTS <slot> [slot] ... */
         /* CLUSTER DELSLOTS <slot> [slot] ... */
         int j, slot;
@@ -4292,8 +4304,8 @@ NULL
                 return;
             }
             if (slots[slot]++ == 1) {
-                addReplyErrorFormat(c,"Slot %d specified multiple times",
-                    (int)slot);
+                addReplyErrorFormat(c, "Slot %d specified multiple times",
+                                    (int)slot);
                 zfree(slots);
                 return;
             }
@@ -4308,8 +4320,8 @@ NULL
                     server.cluster->importing_slots_from[j] = NULL;
 
                 retval = del ? clusterDelSlot(j) :
-                               clusterAddSlot(myself,j);
-                serverAssertWithInfo(c,NULL,retval == C_OK);
+                         clusterAddSlot(myself,j);
+                serverAssertWithInfo(c, NULL, retval == C_OK);
             }
         }
         zfree(slots);
@@ -4336,20 +4348,20 @@ NULL
                 return;
             }
             if ((n = clusterLookupNode(c->argv[4]->ptr)) == NULL) {
-                addReplyErrorFormat(c,"I don't know about node %s",
-                    (char*)c->argv[4]->ptr);
+                addReplyErrorFormat(c, "I don't know about node %s",
+                                    (char*)c->argv[4]->ptr);
                 return;
             }
             server.cluster->migrating_slots_to[slot] = n;
         } else if (!strcasecmp(c->argv[3]->ptr,"importing") && c->argc == 5) {
             if (server.cluster->slots[slot] == myself) {
                 addReplyErrorFormat(c,
-                    "I'm already the owner of hash slot %u",slot);
+                                    "I'm already the owner of hash slot %u", slot);
                 return;
             }
             if ((n = clusterLookupNode(c->argv[4]->ptr)) == NULL) {
-                addReplyErrorFormat(c,"I don't know about node %s",
-                    (char*)c->argv[4]->ptr);
+                addReplyErrorFormat(c, "I don't know about node %s",
+                                    (char*)c->argv[4]->ptr);
                 return;
             }
             server.cluster->importing_slots_from[slot] = n;
@@ -4362,8 +4374,8 @@ NULL
             clusterNode *n = clusterLookupNode(c->argv[4]->ptr);
 
             if (!n) {
-                addReplyErrorFormat(c,"Unknown node %s",
-                    (char*)c->argv[4]->ptr);
+                addReplyErrorFormat(c, "Unknown node %s",
+                                    (char*)c->argv[4]->ptr);
                 return;
             }
             /* If this hash slot was served by 'myself' before to switch
@@ -4371,8 +4383,8 @@ NULL
             if (server.cluster->slots[slot] == myself && n != myself) {
                 if (countKeysInSlot(slot) != 0) {
                     addReplyErrorFormat(c,
-                        "Can't assign hashslot %d to a different node "
-                        "while I still hold keys for this hash slot.", slot);
+                                        "Can't assign hashslot %d to a different node "
+                                        "while I still hold keys for this hash slot.", slot);
                     return;
                 }
             }
@@ -4380,14 +4392,13 @@ NULL
              * for it assigning the slot to another node will clear
              * the migratig status. */
             if (countKeysInSlot(slot) == 0 &&
-                server.cluster->migrating_slots_to[slot])
+                    server.cluster->migrating_slots_to[slot])
                 server.cluster->migrating_slots_to[slot] = NULL;
 
             /* If this node was importing this slot, assigning the slot to
              * itself also clears the importing status. */
             if (n == myself &&
-                server.cluster->importing_slots_from[slot])
-            {
+                    server.cluster->importing_slots_from[slot]) {
                 /* This slot was manually migrated, set this node configEpoch
                  * to a new epoch so that the new version can be propagated
                  * by the cluster.
@@ -4399,7 +4410,7 @@ NULL
                  * a different epoch to each node. */
                 if (clusterBumpConfigEpochWithoutConsensus() == C_OK) {
                     serverLog(LL_WARNING,
-                        "configEpoch updated after importing slot %d", slot);
+                              "configEpoch updated after importing slot %d", slot);
                 }
                 server.cluster->importing_slots_from[slot] = NULL;
             }
@@ -4407,7 +4418,7 @@ NULL
             clusterAddSlot(n,slot);
         } else {
             addReplyError(c,
-                "Invalid CLUSTER SETSLOT action or number of arguments. Try CLUSTER HELP");
+                          "Invalid CLUSTER SETSLOT action or number of arguments. Try CLUSTER HELP");
             return;
         }
         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|CLUSTER_TODO_UPDATE_STATE);
@@ -4415,9 +4426,9 @@ NULL
     } else if (!strcasecmp(c->argv[1]->ptr,"bumpepoch") && c->argc == 2) {
         /* CLUSTER BUMPEPOCH */
         int retval = clusterBumpConfigEpochWithoutConsensus();
-        sds reply = sdscatprintf(sdsempty(),"+%s %llu\r\n",
-                (retval == C_OK) ? "BUMPED" : "STILL",
-                (unsigned long long) myself->configEpoch);
+        sds reply = sdscatprintf(sdsempty(), "+%s %llu\r\n",
+                                 (retval == C_OK) ? "BUMPED" : "STILL",
+                                 (unsigned long long) myself->configEpoch);
         addReplySds(c,reply);
     } else if (!strcasecmp(c->argv[1]->ptr,"info") && c->argc == 2) {
         /* CLUSTER INFO */
@@ -4444,24 +4455,23 @@ NULL
                   myself->slaveof->configEpoch : myself->configEpoch;
 
         sds info = sdscatprintf(sdsempty(),
-            "cluster_state:%s\r\n"
-            "cluster_slots_assigned:%d\r\n"
-            "cluster_slots_ok:%d\r\n"
-            "cluster_slots_pfail:%d\r\n"
-            "cluster_slots_fail:%d\r\n"
-            "cluster_known_nodes:%lu\r\n"
-            "cluster_size:%d\r\n"
-            "cluster_current_epoch:%llu\r\n"
-            "cluster_my_epoch:%llu\r\n"
-            , statestr[server.cluster->state],
-            slots_assigned,
-            slots_ok,
-            slots_pfail,
-            slots_fail,
-            dictSize(server.cluster->nodes),
-            server.cluster->size,
-            (unsigned long long) server.cluster->currentEpoch,
-            (unsigned long long) myepoch
+                                "cluster_state:%s\r\n"
+                                "cluster_slots_assigned:%d\r\n"
+                                "cluster_slots_ok:%d\r\n"
+                                "cluster_slots_pfail:%d\r\n"
+                                "cluster_slots_fail:%d\r\n"
+                                "cluster_known_nodes:%lu\r\n"
+                                "cluster_size:%d\r\n"
+                                "cluster_current_epoch:%llu\r\n"
+                                "cluster_my_epoch:%llu\r\n", statestr[server.cluster->state],
+                                slots_assigned,
+                                slots_ok,
+                                slots_pfail,
+                                slots_fail,
+                                dictSize(server.cluster->nodes),
+                                server.cluster->size,
+                                (unsigned long long) server.cluster->currentEpoch,
+                                (unsigned long long) myepoch
         );
 
         /* Show stats about messages sent and received. */
@@ -4472,27 +4482,27 @@ NULL
             if (server.cluster->stats_bus_messages_sent[i] == 0) continue;
             tot_msg_sent += server.cluster->stats_bus_messages_sent[i];
             info = sdscatprintf(info,
-                "cluster_stats_messages_%s_sent:%lld\r\n",
-                clusterGetMessageTypeString(i),
-                server.cluster->stats_bus_messages_sent[i]);
+                                "cluster_stats_messages_%s_sent:%lld\r\n",
+                                clusterGetMessageTypeString(i),
+                                server.cluster->stats_bus_messages_sent[i]);
         }
         info = sdscatprintf(info,
-            "cluster_stats_messages_sent:%lld\r\n", tot_msg_sent);
+                            "cluster_stats_messages_sent:%lld\r\n", tot_msg_sent);
 
         for (int i = 0; i < CLUSTERMSG_TYPE_COUNT; i++) {
             if (server.cluster->stats_bus_messages_received[i] == 0) continue;
             tot_msg_received += server.cluster->stats_bus_messages_received[i];
             info = sdscatprintf(info,
-                "cluster_stats_messages_%s_received:%lld\r\n",
-                clusterGetMessageTypeString(i),
-                server.cluster->stats_bus_messages_received[i]);
+                                "cluster_stats_messages_%s_received:%lld\r\n",
+                                clusterGetMessageTypeString(i),
+                                server.cluster->stats_bus_messages_received[i]);
         }
         info = sdscatprintf(info,
-            "cluster_stats_messages_received:%lld\r\n", tot_msg_received);
+                            "cluster_stats_messages_received:%lld\r\n", tot_msg_received);
 
         /* Produce the reply protocol. */
-        addReplySds(c,sdscatprintf(sdsempty(),"$%lu\r\n",
-            (unsigned long)sdslen(info)));
+        addReplySds(c, sdscatprintf(sdsempty(), "$%lu\r\n",
+                                    (unsigned long)sdslen(info)));
         addReplySds(c,info);
         addReply(c,shared.crlf);
     } else if (!strcasecmp(c->argv[1]->ptr,"saveconfig") && c->argc == 2) {
@@ -4501,8 +4511,8 @@ NULL
         if (retval == 0)
             addReply(c,shared.ok);
         else
-            addReplyErrorFormat(c,"error saving the cluster node config: %s",
-                strerror(errno));
+            addReplyErrorFormat(c, "error saving the cluster node config: %s",
+                                strerror(errno));
     } else if (!strcasecmp(c->argv[1]->ptr,"keyslot") && c->argc == 3) {
         /* CLUSTER KEYSLOT <key> */
         sds key = c->argv[2]->ptr;
@@ -4565,7 +4575,7 @@ NULL
         clusterBlacklistAddNode(n);
         clusterDelNode(n);
         clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|
-                             CLUSTER_TODO_SAVE_CONFIG);
+                                     CLUSTER_TODO_SAVE_CONFIG);
         addReply(c,shared.ok);
     } else if (!strcasecmp(c->argv[1]->ptr,"replicate") && c->argc == 3) {
         /* CLUSTER REPLICATE <NODE ID> */
@@ -4593,10 +4603,10 @@ NULL
          * slots nor keys to accept to replicate some other node.
          * Slaves can switch to another master without issues. */
         if (nodeIsMaster(myself) &&
-            (myself->numslots != 0 || dictSize(server.db[0].dict) != 0)) {
+                (myself->numslots != 0 || dictSize(server.db[0].dict) != 0)) {
             addReplyError(c,
-                "To set a master the node must be empty and "
-                "without assigned slots.");
+                          "To set a master the node must be empty and "
+                          "without assigned slots.");
             return;
         }
 
@@ -4627,8 +4637,7 @@ NULL
             sdsfree(ni);
         }
     } else if (!strcasecmp(c->argv[1]->ptr,"count-failure-reports") &&
-               c->argc == 3)
-    {
+            c->argc == 3) {
         /* CLUSTER COUNT-FAILURE-REPORTS <NODE ID> */
         clusterNode *n = clusterLookupNode(c->argv[2]->ptr);
 
@@ -4639,8 +4648,7 @@ NULL
             addReplyLongLong(c,clusterNodeFailureReportsCount(n));
         }
     } else if (!strcasecmp(c->argv[1]->ptr,"failover") &&
-               (c->argc == 2 || c->argc == 3))
-    {
+            (c->argc == 2 || c->argc == 3)) {
         /* CLUSTER FAILOVER [FORCE|TAKEOVER] */
         int force = 0, takeover = 0;
 
@@ -4664,11 +4672,10 @@ NULL
             addReplyError(c,"I'm a slave but my master is unknown to me");
             return;
         } else if (!force &&
-                   (nodeFailed(myself->slaveof) ||
-                    myself->slaveof->link == NULL))
-        {
-            addReplyError(c,"Master is down or failed, "
-                            "please use CLUSTER FAILOVER FORCE");
+                (nodeFailed(myself->slaveof) ||
+                        myself->slaveof->link == NULL)) {
+            addReplyError(c, "Master is down or failed, "
+                             "please use CLUSTER FAILOVER FORCE");
             return;
         }
         resetManualFailover();
@@ -4693,8 +4700,7 @@ NULL
             clusterSendMFStart(myself->slaveof);
         }
         addReply(c,shared.ok);
-    } else if (!strcasecmp(c->argv[1]->ptr,"set-config-epoch") && c->argc == 3)
-    {
+    } else if (!strcasecmp(c->argv[1]->ptr,"set-config-epoch") && c->argc == 3) {
         /* CLUSTER SET-CONFIG-EPOCH <epoch>
          *
          * The user is allowed to set the config epoch only when a node is
@@ -4710,15 +4716,15 @@ NULL
         if (epoch < 0) {
             addReplyErrorFormat(c,"Invalid config epoch specified: %lld",epoch);
         } else if (dictSize(server.cluster->nodes) > 1) {
-            addReplyError(c,"The user can assign a config epoch only when the "
-                            "node does not know any other node.");
+            addReplyError(c, "The user can assign a config epoch only when the "
+                             "node does not know any other node.");
         } else if (myself->configEpoch != 0) {
             addReplyError(c,"Node config epoch is already non-zero");
         } else {
             myself->configEpoch = epoch;
             serverLog(LL_WARNING,
-                "configEpoch set to %llu via CLUSTER SET-CONFIG-EPOCH",
-                (unsigned long long) myself->configEpoch);
+                      "configEpoch set to %llu via CLUSTER SET-CONFIG-EPOCH",
+                      (unsigned long long) myself->configEpoch);
 
             if (server.cluster->currentEpoch < (uint64_t)epoch)
                 server.cluster->currentEpoch = epoch;
@@ -4726,12 +4732,12 @@ NULL
              * of a failure to persist the config, the conflict resolution code
              * will assign an unique config to this node. */
             clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|
-                                 CLUSTER_TODO_SAVE_CONFIG);
+                                         CLUSTER_TODO_SAVE_CONFIG);
             addReply(c,shared.ok);
         }
+        // 集群重置
     } else if (!strcasecmp(c->argv[1]->ptr,"reset") &&
-               (c->argc == 2 || c->argc == 3))
-    {
+            (c->argc == 2 || c->argc == 3)) {
         /* CLUSTER RESET [SOFT|HARD] */
         int hard = 0;
 
@@ -4750,15 +4756,15 @@ NULL
         /* Slaves can be reset while containing data, but not master nodes
          * that must be empty. */
         if (nodeIsMaster(myself) && dictSize(c->db->dict) != 0) {
-            addReplyError(c,"CLUSTER RESET can't be called with "
-                            "master nodes containing keys");
+            addReplyError(c, "CLUSTER RESET can't be called with "
+                             "master nodes containing keys");
             return;
         }
         clusterReset(hard);
         addReply(c,shared.ok);
     } else {
-         addReplyErrorFormat(c, "Unknown subcommand or wrong number of arguments for '%s'. Try CLUSTER HELP",
-            (char*)c->argv[1]->ptr);
+        addReplyErrorFormat(c, "Unknown subcommand or wrong number of arguments for '%s'. Try CLUSTER HELP",
+                            (char*)c->argv[1]->ptr);
         return;
     }
 }
