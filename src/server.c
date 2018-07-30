@@ -757,13 +757,16 @@ int incrementallyRehash(int dbid) {
     return 0;
 }
 
-/* This function is called once a background process of some kind terminates,
+/*
+ * This function is called once a background process of some kind terminates,
  * as we want to avoid resizing the hash tables when there is a child in order
  * to play well with copy-on-write (otherwise when a resize happens lots of
  * memory pages are copied). The goal of this function is to update the ability
  * for dict.c to resize the hash tables accordingly to the fact we have o not
- * running childs. */
+ * running childs.
+ */
 void updateDictResizePolicy(void) {
+    // 这里说明没有进程在对 redis
     if (server.rdb_child_pid == -1 && server.aof_child_pid == -1)
         dictEnableResize();
     else

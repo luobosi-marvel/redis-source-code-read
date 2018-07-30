@@ -140,12 +140,13 @@ int _dictInit(dict *d, dictType *type,
 
 /* 
  * Resize the table to the minimal size that contains all the elements,
- * but with the invariant of a USED/BUCKETS ratio near to <= 1 
+ * but with the invariant of a USED/BUCKETS ratio near to <= 1
+ *
  * 这里是将要进行扩容的时候，或者最初初始化的时候，重新计算 table 的大小
  */
 int dictResize(dict *d) {
     int minimal;
-    // 如果目前正在进行扩容操作，那么将直接返回 DICT_ERR
+    // 如果 dict_can_resize = 0（aof rdb 持久化的时候会改变该值的状态），或者正在扩容的时候，那么将直接返回 DICT_ERR
     if (!dict_can_resize || dictIsRehashing(d)) return DICT_ERR;
     minimal = d->ht[0].used;
     // 第一次扩容，如果元素不足 4 个，DICT_HT_INITIAL_SIZE = 4
@@ -162,6 +163,7 @@ int dictExpand(dict *d, unsigned long size) {
     /*
      * the size is invalid if it is smaller than the number of
      * elements already inside the hash table
+     *
      * 如果正在进行扩容或者元素个数比扩容到指定大小还要大，
      * 则说明这次扩容是不成功的
      */
@@ -1056,14 +1058,14 @@ void dictEmpty(dict *d, void(callback)(void *)) {
 }
 
 /*
-    字典进行 rehash 的标志
+    标记字典可以 rehashing
  */
 void dictEnableResize(void) {
     dict_can_resize = 1;
 }
 
 /*
-    字典没有进行 rehash 的标志
+    标记字典不可以 rehashing
  */
 void dictDisableResize(void) {
     dict_can_resize = 0;
