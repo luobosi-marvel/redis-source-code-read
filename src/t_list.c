@@ -11,8 +11,11 @@
  * the function takes care of it if needed. */
 void listTypePush(robj *subject, robj *value, int where) {
     if (subject->encoding == OBJ_ENCODING_QUICKLIST) {
+        // 选择节点插入的位置
         int pos = (where == LIST_HEAD) ? QUICKLIST_HEAD : QUICKLIST_TAIL;
+        // 解码
         value = getDecodedObject(value);
+        // 计算节点的长度
         size_t len = sdslen(value->ptr);
         quicklistPush(subject->ptr, value->ptr, len, pos);
         decrRefCount(value);
@@ -176,11 +179,14 @@ void pushGenericCommand(client *c, int where) {
 
     for (j = 2; j < c->argc; j++) {
         if (!lobj) {
+            // 构造一个 quicklistObject 对象
             lobj = createQuicklistObject();
             quicklistSetOptions(lobj->ptr, server.list_max_ziplist_size,
                                 server.list_compress_depth);
+            // 往字典中添加一个元素
             dbAdd(c->db,c->argv[1],lobj);
         }
+        // 往list 中添加一个节点
         listTypePush(lobj,c->argv[j],where);
         pushed++;
     }
@@ -205,7 +211,7 @@ void rpushCommand(client *c) {
 void pushxGenericCommand(client *c, int where) {
     int j, pushed = 0;
     robj *subject;
-
+    // 返回一个 redisObject 对象
     if ((subject = lookupKeyWriteOrReply(c,c->argv[1],shared.czero)) == NULL ||
         checkType(c,subject,OBJ_LIST)) return;
 

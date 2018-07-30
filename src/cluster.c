@@ -4773,8 +4773,10 @@ void clusterCommand(client *c) {
  * DUMP, RESTORE and MIGRATE commands
  * -------------------------------------------------------------------------- */
 
-/* Generates a DUMP-format representation of the object 'o', adding it to the
- * io stream pointed by 'rio'. This function can't fail. */
+/*
+ * Generates a DUMP-format representation of the object 'o', adding it to the
+ * io stream pointed by 'rio'. This function can't fail.
+ */
 void createDumpPayload(rio *payload, robj *o) {
     unsigned char buf[2];
     uint64_t crc;

@@ -26,6 +26,8 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * todo: Redis对于quicklist内部节点的压缩算法，采用的LZF——一种无损压缩算法。
  */
 
 #include <string.h> /* for memcpy */
@@ -417,6 +419,14 @@ _quicklistNodeSizeMeetsOptimizationRequirement(const size_t sz,
 
 #define sizeMeetsSafetyLimit(sz) ((sz) <= SIZE_SAFETY_LIMIT)
 
+/**
+ * 查看 quicklist 是否允许插入节点
+ *
+ * @param node 节点
+ * @param fill
+ * @param sz
+ * @return
+ */
 REDIS_STATIC int _quicklistNodeAllowInsert(const quicklistNode *node,
                                            const int fill, const size_t sz) {
     if (unlikely(!node))
@@ -473,26 +483,44 @@ REDIS_STATIC int _quicklistNodeAllowMerge(const quicklistNode *a,
         (node)->sz = ziplistBlobLen((node)->zl);                               \
     } while (0)
 
-/* Add new entry to head node of quicklist.
+/*
+ * Add new entry to head node of quicklist.
+ * 在 quicklist 的 添加一个 entry 在 head 节点
  *
  * Returns 0 if used existing head.
- * Returns 1 if new head created. */
+ * Returns 1 if new head created.
+ */
 int quicklistPushHead(quicklist *quicklist, void *value, size_t sz) {
     quicklistNode *orig_head = quicklist->head;
+    /*
+     * likely()是linux提供给程序员的编译优化方法
+     * 目的是将“分支转移”的信息提供给编译器，这样编译器可以对代码进行优化，以减少指令跳转带来的性能下降
+     * 此处表示节点没有满发生的概率比较大，也就是数据项直接插入到当前节点的可能性大，
+     * likely()属于编译器级别的优化
+     */
     if (likely(
+            // 判断该头部节点是否允许插入，计算头部节点中的大小和fill参数设置的大小相比较
             _quicklistNodeAllowInsert(quicklist->head, quicklist->fill, sz))) {
         quicklist->head->zl =
+            // 往当前的 ziplist 压缩列表中添加数据
             ziplistPush(quicklist->head->zl, value, sz, ZIPLIST_HEAD);
+        // 更新头部大小
         quicklistNodeUpdateSz(quicklist->head);
     } else {
+        // 执行到此，说明头部节点已经满了，需要重新创建一个节点
         quicklistNode *node = quicklistCreateNode();
+        // 将新节点压入新创建的ziplist中，并与新创建的quicklist节点关联起来
         node->zl = ziplistPush(ziplistNew(), value, sz, ZIPLIST_HEAD);
-
+        // 更新大小
         quicklistNodeUpdateSz(node);
+        // 将新创建的quicklist节点关联到quicklist中
         _quicklistInsertNodeBefore(quicklist, quicklist->head, node);
     }
+    // 更新total数据项个数
     quicklist->count++;
+    // 更新头结点的数据项个数
     quicklist->head->count++;
+    // 如果尾部quicklist节点指针没变，返回0、反之返回1
     return (orig_head != quicklist->head);
 }
 
@@ -1400,7 +1428,14 @@ int quicklistPop(quicklist *quicklist, int where, unsigned char **data,
     return ret;
 }
 
-/* Wrapper to allow argument-based switching between HEAD/TAIL pop */
+/**
+ * push 操作，需要判断是头部插入还是尾部插入
+ *
+ * @param quicklist
+ * @param value
+ * @param sz
+ * @param where
+ */
 void quicklistPush(quicklist *quicklist, void *value, const size_t sz,
                    int where) {
     if (where == QUICKLIST_HEAD) {

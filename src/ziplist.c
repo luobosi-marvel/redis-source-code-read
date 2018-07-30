@@ -289,6 +289,7 @@
  *
  */
 typedef struct zlentry {
+    // 用于编码前一个条目len的字节
     unsigned int prevrawlensize; /* Bytes used to encode the previos entry len*/
     // 表示前一个 entry 的长度
     unsigned int prevrawlen;     /* Previous entry len. */
@@ -802,8 +803,17 @@ unsigned char *__ziplistDelete(unsigned char *zl, unsigned char *p, unsigned int
     return zl;
 }
 
-/* Insert item at "p". 插入一个元素 */
+/**
+ * 插入一个元素
+ *
+ * @param zl    ziplist 指针
+ * @param p     要插入ziplist 的位置 head or tail
+ * @param s     将要插入的值
+ * @param slen  该值的长度
+ * @return
+ */
 unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned char *s, unsigned int slen) {
+    // 当前 ziplist 的长度
     size_t curlen = intrev32ifbe(ZIPLIST_BYTES(zl)), reqlen;
     // 这里明明就是用 4 位去存储前一个字节的长度
     unsigned int prevlensize, prevlen = 0;
@@ -832,14 +842,18 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
     /* 查看条目是否可以编码 */
     if (zipTryEncoding(s, slen, &value, &encoding)) {
         /* 'encoding' is set to the appropriate integer encoding */
+        // int 数据实际的长度，也就是占的字节数
         reqlen = zipIntSize(encoding);
     } else {
-        /* 'encoding' is untouched, however zipStoreEntryEncoding will use the
-         * string length to figure out how to encode it. */
+        /*
+         * 'encoding' is untouched, however zipStoreEntryEncoding will use the
+         * string length to figure out how to encode it.
+         *
+         * 这里就是字符串的长度
+         */
         reqlen = slen;
     }
-    /* We need space for both the length of the previous entry and
-     * the length of the payload. */
+    /* We need space for both the length of the previous entry and the length of the payload. */
     reqlen += zipStorePrevEntryLength(NULL, prevlen);
     reqlen += zipStoreEntryEncoding(NULL, encoding, slen);
 
@@ -855,10 +869,11 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
 
     /* Store offset because a realloc may change the address of zl. */
     offset = p - zl;
+    // 给 ziplist 重新分配内存，包括数据的转移
     zl = ziplistResize(zl, curlen + reqlen + nextdiff);
     p = zl + offset;
 
-    /* Apply memory move when necessary and update tail offset. */
+    /* 必要时应用内存移动并更新尾部偏移量 */
     if (p[0] != ZIP_END) {
         /* Subtract one because of the ZIP_END bytes */
         memmove(p + reqlen, p - nextdiff, curlen - offset - 1 + nextdiff);
@@ -897,11 +912,13 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
     /* Write the entry */
     p += zipStorePrevEntryLength(p, prevlen);
     p += zipStoreEntryEncoding(p, encoding, slen);
+    // 如果这里是字符串
     if (ZIP_IS_STR(encoding)) {
         memcpy(p, s, slen);
     } else {
         zipSaveInteger(p, value, encoding);
     }
+    // ziplist len + 1
     ZIPLIST_INCR_LENGTH(zl, 1);
     return zl;
 }
@@ -1027,8 +1044,8 @@ unsigned char *ziplistMerge(unsigned char **first, unsigned char **second) {
  *  往 ziplist 里面添加一个元素
  *
  * @param zl    zl 列表
- * @param s
- * @param slen
+ * @param s     将要插入的值
+ * @param slen  值得长度
  * @param where 在哪里插入元素 ZIPLIST_ENTRY_HEAD or ZIPLIST_ENTRY_END
  * @return
  */
