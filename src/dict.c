@@ -226,6 +226,9 @@ int dictRehash(dict *d, int n) {
     int empty_visits = n * 10; /* Max number of empty buckets to visit. */
     if (!dictIsRehashing(d)) return 0;
 
+    /*
+     * todo: 扩容时，每次只移动 n 个元素，防止 redis 阻塞
+     */
     while (n-- && d->ht[0].used != 0) {
         dictEntry *de, *nextde;
 
@@ -290,7 +293,7 @@ long long timeInMilliseconds(void) {
 int dictRehashMilliseconds(dict *d, int ms) {
     long long start = timeInMilliseconds();
     int rehashes = 0;
-    // 步长为 100
+    // todo: 每次扩容步长为 100，超过了指定时间就退出
     while (dictRehash(d, 100)) {
         rehashes += 100;
         if (timeInMilliseconds() - start > ms) break;
