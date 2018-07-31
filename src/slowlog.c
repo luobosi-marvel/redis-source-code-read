@@ -42,9 +42,13 @@
 #include "server.h"
 #include "slowlog.h"
 
-/* Create a new slowlog entry.
+/*
+ * Create a new slowlog entry.
  * Incrementing the ref count of all the objects retained is up to
- * this function. */
+ * this function.
+ *
+ * 创建一个 slow log 结构体
+ */
 slowlogEntry *slowlogCreateEntry(client *c, robj **argv, int argc, long long duration) {
     slowlogEntry *se = zmalloc(sizeof(*se));
     int j, slargc = argc;
@@ -112,33 +116,46 @@ void slowlogFreeEntry(void *septr) {
 /* Initialize the slow log. This function should be called a single time
  * at server startup. */
 void slowlogInit(void) {
+    // 创建一个慢查询队列，其实就是创建一个列表
     server.slowlog = listCreate();
     server.slowlog_entry_id = 0;
     listSetFreeMethod(server.slowlog,slowlogFreeEntry);
 }
 
-/* Push a new entry into the slow log.
+/*
+ * Push a new entry into the slow log.
  * This function will make sure to trim the slow log accordingly to the
- * configured max length. */
+ * configured max length.
+ *
+ * todo: 头插法，往 slow log head 添加一个慢查询节点
+ *
+ */
 void slowlogPushEntryIfNeeded(client *c, robj **argv, int argc, long long duration) {
     if (server.slowlog_log_slower_than < 0) return; /* Slowlog disabled */
     if (duration >= server.slowlog_log_slower_than)
+        // 头插法
         listAddNodeHead(server.slowlog,
                         slowlogCreateEntry(c,argv,argc,duration));
 
-    /* Remove old entries if needed. */
+    /*
+     * Remove old entries if needed.
+     * 如果超过了 redis.conf 配置的最大长度，则该语句会删除旧的节点
+     */
     while (listLength(server.slowlog) > server.slowlog_max_len)
         listDelNode(server.slowlog,listLast(server.slowlog));
 }
 
 /* Remove all the entries from the current slow log. */
 void slowlogReset(void) {
+    // 重置一个 list
     while (listLength(server.slowlog) > 0)
         listDelNode(server.slowlog,listLast(server.slowlog));
 }
 
-/* The SLOWLOG command. Implements all the subcommands needed to handle the
- * Redis slow log. */
+/*
+ * The SLOWLOG command. Implements all the subcommands needed to handle the Redis slow log.
+ * SLOWLOG命令。 实现处理Redis慢日志所需的所有子命令。
+ */
 void slowlogCommand(client *c) {
     if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr,"help")) {
         const char *help[] = {

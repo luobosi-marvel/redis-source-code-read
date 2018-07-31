@@ -30,14 +30,21 @@
 #define SLOWLOG_ENTRY_MAX_ARGC 32
 #define SLOWLOG_ENTRY_MAX_STRING 128
 
+/**
+ * todo: 慢查询日志就是系统在命令执行前后计算每条命令的执行时间, 先进先出的队列
+ * 当超过预设阀值，就将这条命令的相关信息（慢查询ID，发生时间戳，耗时，命令的详细信息）记录下来。
+ */
 /* This structure defines an entry inside the slow log list */
 typedef struct slowlogEntry {
     robj **argv;
     int argc;
+    // 唯一 id
     long long id;       /* Unique entry identifier. */
     long long duration; /* Time spent by the query, in microseconds. */
     time_t time;        /* Unix time at which the query was executed. */
+    // client 的名字
     sds cname;          /* Client name. */
+    // client 的地址
     sds peerid;         /* Client network address. */
 } slowlogEntry;
 
