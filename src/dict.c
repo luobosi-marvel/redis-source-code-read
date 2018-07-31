@@ -413,30 +413,41 @@ dictEntry *dictAddOrFind(dict *d, void *key) {
     return entry ? entry : existing;
 }
 
-/* Search and remove an element. This is an helper function for
+/*
+ * Search and remove an element. This is an helper function for
  * dictDelete() and dictUnlink(), please check the top comment
- * of those functions. */
+ * of those functions.
+ */
 static dictEntry *dictGenericDelete(dict *d, const void *key, int nofree) {
     uint64_t h, idx;
     dictEntry *he, *prevHe;
     int table;
-
+    // 如果 hashtable 为空，则直接返回 null
     if (d->ht[0].used == 0 && d->ht[1].used == 0) return NULL;
 
     if (dictIsRehashing(d)) _dictRehashStep(d);
+    // 计算指定 key 的hash 值
     h = dictHashKey(d, key);
-
+    /*
+     * 循环 ht[0] 和 ht[1]
+     */
     for (table = 0; table <= 1; table++) {
+        // 计算 key 的下标
         idx = h & d->ht[table].sizemask;
+        // 获取指定下标存储的 entry
         he = d->ht[table].table[idx];
         prevHe = NULL;
+        // 可能存在冲突节点，要循环遍历冲突的链表
         while (he) {
+            // 判断两个 key 是否相同
             if (key == he->key || dictCompareKeys(d, key, he->key)) {
+                // 从列表中解除该元素
                 /* Unlink the element from the list */
                 if (prevHe)
                     prevHe->next = he->next;
                 else
                     d->ht[table].table[idx] = he->next;
+                // 是否要释放删除的元素
                 if (!nofree) {
                     dictFreeKey(d, he);
                     dictFreeVal(d, he);
@@ -445,6 +456,7 @@ static dictEntry *dictGenericDelete(dict *d, const void *key, int nofree) {
                 d->ht[table].used--;
                 return he;
             }
+            // 找下一个节点
             prevHe = he;
             he = he->next;
         }
@@ -453,8 +465,10 @@ static dictEntry *dictGenericDelete(dict *d, const void *key, int nofree) {
     return NULL; /* not found */
 }
 
-/* Remove an element, returning DICT_OK on success or DICT_ERR if the
- * element was not found. */
+/*
+ * Remove an element, returning DICT_OK on success or DICT_ERR if the
+ * element was not found.
+ */
 int dictDelete(dict *ht, const void *key) {
     return dictGenericDelete(ht, key, 0) ? DICT_OK : DICT_ERR;
 }
@@ -534,6 +548,7 @@ dictEntry *dictFind(dict *d, const void *key) {
     if (d->ht[0].used + d->ht[1].used == 0) return NULL; /* dict is empty */
     if (dictIsRehashing(d)) _dictRehashStep(d);
     h = dictHashKey(d, key);
+    // 先查 ht[0]，ht[0] 查不到，就查 ht[1]
     for (table = 0; table <= 1; table++) {
         idx = h & d->ht[table].sizemask;
         he = d->ht[table].table[idx];
@@ -985,7 +1000,7 @@ static int _dictExpandIfNeeded(dict *d) {
 
     /* 如果哈希表的已用节点数 >= 哈希表的大小，并且以下条件任一个为真：
        1) dict_can_resize 为真 
-       2) 已用节点数除以哈希表大小之比大于 dict_force_resize_ratio 
+       2) 已用节点数除以哈希表大小之比大于 dict_force_resize_ratio=5
        那么调用 dictExpand 对哈希表进行扩展,扩展的体积至少为已使用节点数的两倍 
     */  
     if (d->ht[0].used >= d->ht[0].size &&

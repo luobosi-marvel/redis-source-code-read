@@ -900,12 +900,18 @@ void clientsCron(void) {
     }
 }
 
-/* This function handles 'background' operations we are required to do
+/*
+ * This function handles 'background' operations we are required to do
  * incrementally in Redis databases, such as active key expiring, resizing,
- * rehashing. */
+ * rehashing.
+ *
+ * 此函数处理我们需要执行的“后台”操作在Redis数据库中递增，例如 key 到期，rehashing
+ */
 void databasesCron(void) {
-    /* Expire keys by random sampling. Not required for slaves
-     * as master will synthesize DELs for us. */
+    /*
+     * Expire keys by random sampling. Not required for slaves
+     * as master will synthesize DELs for us.
+     */
     if (server.active_expire_enabled && server.masterhost == NULL) {
         activeExpireCycle(ACTIVE_EXPIRE_CYCLE_SLOW);
     } else if (server.masterhost != NULL) {
