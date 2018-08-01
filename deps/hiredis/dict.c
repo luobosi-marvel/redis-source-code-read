@@ -291,10 +291,12 @@ static void dictReleaseIterator(dictIterator *iter) {
 
 /* ------------------------- private functions ------------------------------ */
 
-/* Expand the hash table if needed */
+/* 如果需要，则扩展哈希表 */
 static int _dictExpandIfNeeded(dict *ht) {
-    /* If the hash table is empty expand it to the initial size,
-     * if the table is "full" dobule its size. */
+    /*
+     * 如果哈希表为空，则按默认大小扩展哈希表
+     * 如果哈希表满了，则按 size * 2 扩容
+     */
     if (ht->size == 0)
         return dictExpand(ht, DICT_HT_INITIAL_SIZE);
     if (ht->used == ht->size)

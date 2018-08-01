@@ -745,6 +745,7 @@ void tryResizeHashTables(int dbid) {
  * The function returns 1 if some rehashing was performed, otherwise 0
  * is returned.
  */
+
 int incrementallyRehash(int dbid) {
     /* Keys dictionary */
     if (dictIsRehashing(server.db[dbid].dict)) {
@@ -903,10 +904,6 @@ void clientsCron(void) {
 }
 
 /*
- * This function handles 'background' operations we are required to do
- * incrementally in Redis databases, such as active key expiring, resizing,
- * rehashing.
- *
  * 此函数处理我们需要执行的“后台”操作在Redis数据库中递增，例如 key 到期，rehashing
  */
 void databasesCron(void) {

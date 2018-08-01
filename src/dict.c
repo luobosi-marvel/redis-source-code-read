@@ -157,21 +157,19 @@ int dictResize(dict *d) {
 
 /*
     @param d    原字典
-    @param size     扩容到指定的 size
+    @param size     扩容的 size，大于 size 的最小2次幂
  */
 int dictExpand(dict *d, unsigned long size) {
     /*
-     * the size is invalid if it is smaller than the number of
-     * elements already inside the hash table
-     *
      * 如果正在进行扩容或者元素个数比扩容到指定大小还要大，
      * 则说明这次扩容是不成功的
      */
     if (dictIsRehashing(d) || d->ht[0].used > size)
         return DICT_ERR;
     // 一个新的 hash table
-    dictht n; /* the new hash table */
-    unsigned long realsize = _dictNextPower(size); // 重新计算新的 hashtable 的容量
+    dictht n;
+    // 重新计算新的 hashtable 的容量
+    unsigned long realsize = _dictNextPower(size);
 
     /* 扩容之后的大小和原来的大小一样的话则说明这次扩容是不成功的 */
     if (realsize == d->ht[0].size) return DICT_ERR;
@@ -182,12 +180,7 @@ int dictExpand(dict *d, unsigned long size) {
     n.table = zcalloc(realsize * sizeof(dictEntry *));
     n.used = 0;
 
-    /*
-     * Is this the first initialization? If so it's not really a rehashing
-     * we just set the first hash table so that it can accept keys.
-     * 
-     * 如果这是第一次初始化，那么直接就设置成指定大小
-     */
+    //如果这是第一次初始化，那么直接就设置成指定大小
     if (d->ht[0].table == NULL) {
         d->ht[0] = n;
         return DICT_OK;
@@ -200,7 +193,7 @@ int dictExpand(dict *d, unsigned long size) {
     return DICT_OK;
 }
 
-/* 
+/*
  * Performs N steps of incremental rehashing. Returns 1 if there are still
  * keys to move from the old to the new hash table, otherwise 0 is returned.
  *
@@ -209,7 +202,7 @@ int dictExpand(dict *d, unsigned long size) {
  * since part of the hash table may be composed of empty spaces, it is not
  * guaranteed that this function will rehash even a single bucket, since it
  * will visit at max N*10 empty buckets in total, otherwise the amount of
- * work it does would be unbound and the function may block for a long time. 
+ * work it does would be unbound and the function may block for a long time.
  * 执行增量重新哈希的N个步骤。 如果仍有，则返回1
  * 键从旧的哈希表移到新的哈希表，否则返回0。
  *
@@ -257,6 +250,7 @@ int dictRehash(dict *d, int n) {
             de = nextde;
         }
         d->ht[0].table[d->rehashidx] = NULL;
+        // todo: 通过 rehashidx 参数记录当前转移数据的位置，方便下次转移
         d->rehashidx++;
     }
 
@@ -993,7 +987,7 @@ unsigned long dictScan(dict *d,
 
 /* ------------------------- private functions ------------------------------ */
 
-/* Expand the hash table if needed 如果需要扩展hash表 */
+/* 如果需要扩展hash表 */
 static int _dictExpandIfNeeded(dict *d) {
     /* Incremental rehashing already in progress. Return. */
     if (dictIsRehashing(d)) return DICT_OK;
@@ -1047,7 +1041,7 @@ static long _dictKeyIndex(dict *d, const void *key, uint64_t hash, dictEntry **e
     if (_dictExpandIfNeeded(d) == DICT_ERR)
         return -1;
     for (table = 0; table <= 1; table++) {
-        // 计算下标
+        // 计算下标 todo：这里为什么是 & d->ht[table].sizemask?
         idx = hash & d->ht[table].sizemask;
         /* Search if this slot does not already contain the given key */
         he = d->ht[table].table[idx];
