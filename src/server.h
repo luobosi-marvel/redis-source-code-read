@@ -1034,10 +1034,16 @@ struct redisServer {
     long long stat_sync_full;       /* Number of full resyncs with slaves. */
     long long stat_sync_partial_ok; /* Number of accepted PSYNC requests. */
     long long stat_sync_partial_err;/* Number of unaccepted PSYNC requests. */
+
+    // 服务器中的慢查询日志队列
     list *slowlog;                  /* SLOWLOG list of commands */
+    // 下一个要添加慢查询日志的id
     long long slowlog_entry_id;     /* SLOWLOG current entry ID */
+    // 慢查询日志时间阈值
     long long slowlog_log_slower_than; /* SLOWLOG time limit (to get logged) */
+    // 慢查询列表长度
     unsigned long slowlog_max_len;     /* SLOWLOG max number of items logged */
+
     struct malloc_stats cron_malloc_stats; /* sampled in serverCron(). */
     long long stat_net_input_bytes; /* Bytes read from network. */
     long long stat_net_output_bytes; /* Bytes written to network. */

@@ -26,21 +26,36 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
+// slowlog 最大参数个数, 超过也只会记录 最大值个数
 #define SLOWLOG_ENTRY_MAX_ARGC 32
+// slowlog 记录最大的字符串长度, 超过也只会记录 最大值个数
 #define SLOWLOG_ENTRY_MAX_STRING 128
 
 /**
  * todo: 慢查询日志就是系统在命令执行前后计算每条命令的执行时间, 先进先出的队列
- * 当超过预设阀值，就将这条命令的相关信息（慢查询ID，发生时间戳，耗时，命令的详细信息）记录下来。
+ * 当超过预设阀值，就将这条命令的相关信息（慢查询ID，发生时间戳，耗时，命令的详细信息）
+ * 记录下来。
+ *
+ * 通过 slowlog get 命令来获取慢查询日志
  */
-/* This structure defines an entry inside the slow log list */
 typedef struct slowlogEntry {
+    /*
+     * 存储命令以及命令参数，例如 config set slowlog-max-len 10
+     * 那么 argv 指向的就是 "config" "set" "slowlog-max-len" "10"
+     *
+     * 参数的长度受 SLOWLOG_ENTRY_MAX_STRING 限制
+     */
     robj **argv;
+    /*
+     * 命令与命令参数的数量
+     * 参数个数受 SLOWLOG_ENTRY_MAX_ARGC 限制
+     */
     int argc;
     // 唯一 id
     long long id;       /* Unique entry identifier. */
+    // 命令执行时间的时长，以微秒计算
     long long duration; /* Time spent by the query, in microseconds. */
+    // 命令执行时的 Unix 时间戳
     time_t time;        /* Unix time at which the query was executed. */
     // client 的名字
     sds cname;          /* Client name. */

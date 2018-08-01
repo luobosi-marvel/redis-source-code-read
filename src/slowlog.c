@@ -50,16 +50,21 @@
  * 创建一个 slow log 结构体
  */
 slowlogEntry *slowlogCreateEntry(client *c, robj **argv, int argc, long long duration) {
+    // 给 slowlogEntry 分配内存
     slowlogEntry *se = zmalloc(sizeof(*se));
     int j, slargc = argc;
-
+    // 如果参数个数太多，超过了 slowlog 的限制，那么 slowlog 会按照配置的最大值截取
     if (slargc > SLOWLOG_ENTRY_MAX_ARGC) slargc = SLOWLOG_ENTRY_MAX_ARGC;
     se->argc = slargc;
     se->argv = zmalloc(sizeof(robj*)*slargc);
     for (j = 0; j < slargc; j++) {
-        /* Logging too many arguments is a useless memory waste, so we stop
+        /*
+         * Logging too many arguments is a useless memory waste, so we stop
          * at SLOWLOG_ENTRY_MAX_ARGC, but use the last argument to specify
-         * how many remaining arguments there were in the original command. */
+         * how many remaining arguments there were in the original command.
+         * 记录太多的参数是在内存浪费，所以我们停下来在SLOWLOG_ENTRY_MAX_ARGC，
+         * 但使用最后一个参数指定原始命令中有多少剩余参数。
+         */
         if (slargc != argc && j == slargc-1) {
             se->argv[j] = createObject(OBJ_STRING,
                 sdscatprintf(sdsempty(),"... (%d more arguments)",
@@ -68,8 +73,8 @@ slowlogEntry *slowlogCreateEntry(client *c, robj **argv, int argc, long long dur
             /* Trim too long strings as well... */
             if (argv[j]->type == OBJ_STRING &&
                 sdsEncodedObject(argv[j]) &&
-                sdslen(argv[j]->ptr) > SLOWLOG_ENTRY_MAX_STRING)
-            {
+                sdslen(argv[j]->ptr) > SLOWLOG_ENTRY_MAX_STRING){
+                // 如果字符串长度太长，则 slowlog 会截取，避免浪费太多内存
                 sds s = sdsnewlen(argv[j]->ptr, SLOWLOG_ENTRY_MAX_STRING);
 
                 s = sdscatprintf(s,"... (%lu more bytes)",
@@ -79,16 +84,19 @@ slowlogEntry *slowlogCreateEntry(client *c, robj **argv, int argc, long long dur
             } else if (argv[j]->refcount == OBJ_SHARED_REFCOUNT) {
                 se->argv[j] = argv[j];
             } else {
-                /* Here we need to dupliacate the string objects composing the
+                /*
+                 * Here we need to dupliacate the string objects composing the
                  * argument vector of the command, because those may otherwise
                  * end shared with string objects stored into keys. Having
                  * shared objects between any part of Redis, and the data
                  * structure holding the data, is a problem: FLUSHALL ASYNC
-                 * may release the shared string object and create a race. */
+                 * may release the shared string object and create a race.
+                 */
                 se->argv[j] = dupStringObject(argv[j]);
             }
         }
     }
+    // 记录慢命令添加到 slowlog 添加到的时间点
     se->time = time(NULL);
     se->duration = duration;
     se->id = server.slowlog_entry_id++;
@@ -131,7 +139,9 @@ void slowlogInit(void) {
  *
  */
 void slowlogPushEntryIfNeeded(client *c, robj **argv, int argc, long long duration) {
+    // 如果 slowlog_log_slower)than 小于 0，则表示 slowlog 该功能被禁用了
     if (server.slowlog_log_slower_than < 0) return; /* Slowlog disabled */
+    // 对超时的命令进行记录
     if (duration >= server.slowlog_log_slower_than)
         // 头插法
         listAddNodeHead(server.slowlog,

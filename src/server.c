@@ -2338,9 +2338,13 @@ void call(client *c, int flags) {
 
     /* Call the command. */
     dirty = server.dirty;
+
+    // todo: 所有命令执行都会在这里记录命令执行的时间，即用了多少微秒
     start = ustime();
     c->cmd->proc(c);
     duration = ustime()-start;
+
+
     dirty = server.dirty-dirty;
     if (dirty < 0) dirty = 0;
 
