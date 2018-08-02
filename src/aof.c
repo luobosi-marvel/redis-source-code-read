@@ -309,7 +309,8 @@ ssize_t aofWrite(int fd, const char *buf, size_t len) {
     return totwritten;
 }
 
-/* Write the append only file buffer on disk.
+/*
+ * Write the append only file buffer on disk.
  *
  * Since we are required to write the AOF before replying to the client,
  * and the only way the client socket can get a write is entering when the
@@ -325,8 +326,8 @@ ssize_t aofWrite(int fd, const char *buf, size_t len) {
  * When this happens we remember that there is some aof buffer to be
  * flushed ASAP, and will try to do that in the serverCron() function.
  *
- * However if force is set to 1 we'll write regardless of the background
- * fsync. */
+ * However if force is set to 1 we'll write regardless of the background fsync.
+ */
 #define AOF_WRITE_LOG_ERROR_RATE 30 /* Seconds between errors logging. */
 void flushAppendOnlyFile(int force) {
     ssize_t nwritten;
@@ -1472,7 +1473,7 @@ void aofClosePipes(void) {
 }
 
 /* ----------------------------------------------------------------------------
- * AOF background rewrite
+ * AOF background rewrite Redis 后台重写缓冲区 aof_rewrite
  * ------------------------------------------------------------------------- */
 
 /* This is how rewriting of the append only file in background works:

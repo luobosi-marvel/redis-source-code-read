@@ -66,16 +66,20 @@ static pthread_mutex_t bio_mutex[BIO_NUM_OPS];
 static pthread_cond_t bio_newjob_cond[BIO_NUM_OPS];
 static pthread_cond_t bio_step_cond[BIO_NUM_OPS];
 static list *bio_jobs[BIO_NUM_OPS];
-/* The following array is used to hold the number of pending jobs for every
+/*
+ * The following array is used to hold the number of pending jobs for every
  * OP type. This allows us to export the bioPendingJobsOfType() API that is
  * useful when the main thread wants to perform some operation that may involve
  * objects shared with the background thread. The main thread will just wait
  * that there are no longer jobs of this type to be executed before performing
- * the sensible operation. This data is also useful for reporting. */
+ * the sensible operation. This data is also useful for reporting.
+ */
 static unsigned long long bio_pending[BIO_NUM_OPS];
 
-/* This structure represents a background Job. It is only used locally to this
- * file as the API does not expose the internals at all. */
+/*
+ * This structure represents a background Job. It is only used locally to this
+ * file as the API does not expose the internals at all.
+ */
 struct bio_job {
     time_t time; /* Time at which the job was created. */
     /* Job specific arguments pointers. If we need to pass more than three
@@ -246,10 +250,12 @@ unsigned long long bioWaitStepOfType(int type) {
     return val;
 }
 
-/* Kill the running bio threads in an unclean way. This function should be
+/*
+ * Kill the running bio threads in an unclean way. This function should be
  * used only when it's critical to stop the threads for some reason.
  * Currently Redis does this only on crash (for instance on SIGSEGV) in order
- * to perform a fast memory check without other threads messing with memory. */
+ * to perform a fast memory check without other threads messing with memory.
+ */
 void bioKillThreads(void) {
     int err, j;
 

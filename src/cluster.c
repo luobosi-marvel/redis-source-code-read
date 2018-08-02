@@ -665,7 +665,7 @@ void clusterAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
  * { and } is hashed. This may be useful in the future to force certain
  * keys to be in the same node (assuming no resharding is in progress).
  *
- * todo: 集群的时候计算 key 的hash 值方法
+ * todo: 集群的时候计算 key 的hash 值方法，CRC 冗余校验法
  * 如果键内容包含 { } 大括号字符，则计算槽的有效部分是括号内的内容，
  * 否则采用键的全内容计算槽
  * 例如：cluster keyslot key:{hash_tag}:111 则只计算 hash_tag 的值，
