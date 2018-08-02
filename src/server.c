@@ -1094,6 +1094,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     clientsCron();
 
     /* Handle background operations on Redis databases. */
+    // todo: serverCron 定时时间事件  databasesCron
     databasesCron();
 
     /* Start a scheduled AOF rewrite if this was requested by the user while

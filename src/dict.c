@@ -271,7 +271,7 @@ int dictRehash(dict *d, int n) {
 }
 
 /**
- * 计算时间戳
+ * 计算时间戳databasesCron
  * 
  * long long通常被定义成 64 位宽
  * @return  [description]
