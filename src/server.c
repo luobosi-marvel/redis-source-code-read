@@ -1097,11 +1097,13 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     // todo: serverCron 定时时间事件  databasesCron
     databasesCron();
 
-    /* Start a scheduled AOF rewrite if this was requested by the user while
-     * a BGSAVE was in progress. */
+    /*
+     * Start a scheduled AOF rewrite if this was requested by the user while a BGSAVE was in progress.
+     *
+     */
     if (server.rdb_child_pid == -1 && server.aof_child_pid == -1 &&
-        server.aof_rewrite_scheduled)
-    {
+        server.aof_rewrite_scheduled) {
+        // todo: 后台线程重写 AOF 文件缓冲区
         rewriteAppendOnlyFileBackground();
     }
 
@@ -2079,6 +2081,7 @@ void initServer(void) {
     scriptingInit(1);
     slowlogInit();
     latencyMonitorInit();
+    // todo: aof 后台线程初始化
     bioInit();
     server.initial_memory_usage = zmalloc_used_memory();
 }

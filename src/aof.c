@@ -55,6 +55,11 @@ void aofClosePipes(void);
  *
  * For this reason we use a list of blocks, every block is
  * AOF_RW_BUF_BLOCK_SIZE bytes.
+ *
+ *
+ * AOF 有  AOF缓冲区、AOF重写缓冲区
+ *
+ *
  * ------------------------------------------------------------------------- */
 
 #define AOF_RW_BUF_BLOCK_SIZE (1024*1024*10)    /* 10 MB per block */
@@ -75,7 +80,10 @@ void aofRewriteBufferReset(void) {
     listSetFreeMethod(server.aof_rewrite_buf_blocks,zfree);
 }
 
-/* Return the current size of the AOF rewrite buffer. */
+/*
+ * Return the current size of the AOF rewrite buffer.
+ * 返回 AOF 重写缓冲区的大小
+ */
 unsigned long aofRewriteBufferSize(void) {
     listNode *ln;
     listIter li;
@@ -194,7 +202,7 @@ ssize_t aofRewriteBufferWrite(int fd) {
 }
 
 /* ----------------------------------------------------------------------------
- * AOF file implementation
+ * todo: AOF file implementation
  * ------------------------------------------------------------------------- */
 
 /* Starts a background task that performs fsync() against the specified
@@ -256,8 +264,10 @@ int startAppendOnly(void) {
             strerror(errno));
         return C_ERR;
     }
+    // 说明当前没有 rdb 后台进程在进行持久化，AOF 后台任务在可能的情况下开始。
     if (server.rdb_child_pid != -1) {
         server.aof_rewrite_scheduled = 1;
+        // AOF已启用，但已有子进程在磁盘上保存RDB文件。 AOF 后台任务在可能的情况下开始。
         serverLog(LL_WARNING,"AOF was enabled but there is already a child process saving an RDB file on disk. An AOF background was scheduled to start when possible.");
     } else {
         /* If there is a pending AOF rewrite, we need to switch it off and
@@ -491,26 +501,40 @@ void flushAppendOnlyFile(int force) {
     }
 }
 
+/**
+ * 根据传入命令和该命令的参数将其构造成满足AOF文件格式的字符串的功能。
+ *     *2          // 接下来的一条命令有2个参数
+ *     $6         // 第一个参数的长度为6
+ *     SELECT      // 第一个参数
+ *     $1         // 第二个参数的长度为1
+ *     0           // 第二个参数
+ * @param dst
+ * @param argc
+ * @param argv
+ * @return
+ */
 sds catAppendOnlyGenericCommand(sds dst, int argc, robj **argv) {
     char buf[32];
     int len, j;
     robj *o;
-
+    // 构建格式为“ *<count>\r\n "格式的字符串，<count>为命令参数个数
     buf[0] = '*';
-    len = 1+ll2string(buf+1,sizeof(buf)-1,argc);
+    len = 1 + ll2string(buf + 1, sizeof(buf) - 1, argc);
     buf[len++] = '\r';
     buf[len++] = '\n';
-    dst = sdscatlen(dst,buf,len);
+    dst = sdscatlen(dst, buf, len);
 
+    // 重建命令，每个item的格式为“ $<len>\r\n <content>\r\n ”，
+    // 其中<len>指明<content>的字符长度，<content>为参数内容
     for (j = 0; j < argc; j++) {
         o = getDecodedObject(argv[j]);
         buf[0] = '$';
-        len = 1+ll2string(buf+1,sizeof(buf)-1,sdslen(o->ptr));
+        len = 1 + ll2string(buf + 1, sizeof(buf) - 1, sdslen(o->ptr));
         buf[len++] = '\r';
         buf[len++] = '\n';
-        dst = sdscatlen(dst,buf,len);
-        dst = sdscatlen(dst,o->ptr,sdslen(o->ptr));
-        dst = sdscatlen(dst,"\r\n",2);
+        dst = sdscatlen(dst, buf, len);
+        dst = sdscatlen(dst, o->ptr, sdslen(o->ptr));
+        dst = sdscatlen(dst, "\r\n", 2);
         decrRefCount(o);
     }
     return dst;
@@ -1587,8 +1611,10 @@ void aofUpdateCurrentSize(void) {
     latencyAddSampleIfNeeded("aof-fstat",latency);
 }
 
-/* A background append only file rewriting (BGREWRITEAOF) terminated its work.
- * Handle this. */
+/*
+ * A background append only file rewriting (BGREWRITEAOF) terminated its work.
+ * Handle this.
+ */
 void backgroundRewriteDoneHandler(int exitcode, int bysignal) {
     if (!bysignal && exitcode == 0) {
         int newfd, oldfd;

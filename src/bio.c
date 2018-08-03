@@ -62,6 +62,7 @@
 #include "bio.h"
 
 static pthread_t bio_threads[BIO_NUM_OPS];
+// 信号量的个数
 static pthread_mutex_t bio_mutex[BIO_NUM_OPS];
 static pthread_cond_t bio_newjob_cond[BIO_NUM_OPS];
 static pthread_cond_t bio_step_cond[BIO_NUM_OPS];
@@ -105,7 +106,20 @@ void bioInit(void) {
 
     /* Initialization of state vars and objects */
     for (j = 0; j < BIO_NUM_OPS; j++) {
+        // pthread_mutex_init 用来生成一个互斥锁，NULL 表示使用默认值
+        // 第二个可选参数 PTHREAD_MUTEX_NORMAL、PTHREAD_MUTEX_ERRORCHECK、
+        // PTHREAD_MUTEX_RECURSIVE 和 PTHREAD_MUTEX_DEFAULT
         pthread_mutex_init(&bio_mutex[j],NULL);
+        /*
+         * pthread_cond_init:被用来初始化一个条件变量
+         * extern int pthread_cond_init __P ((pthread_cond_t *__cond,__const pthread_condattr_t *__cond_attr));
+         *
+         * 其中cond是一个指向结构pthread_cond_t的指针，cond_attr是一个指向结构pthread_condattr_t的指针。
+         * 结构 pthread_condattr_t是条件变量的属性结构，和互斥锁一样我们可以用它来设置条件变量是进程内
+         * 可用还是进程间可用，默认值是 PTHREAD_ PROCESS_PRIVATE，即此条件变量被同一进程内的各个线程使用。
+         * 注意初始化条件变量只有未被使用时才能重新初始化或被释放。
+         * 释放一个条件变量的函数为pthread_cond_destroy（pthread_cond_t cond）。
+         */
         pthread_cond_init(&bio_newjob_cond[j],NULL);
         pthread_cond_init(&bio_step_cond[j],NULL);
         bio_jobs[j] = listCreate();
@@ -119,9 +133,11 @@ void bioInit(void) {
     while (stacksize < REDIS_THREAD_STACK_SIZE) stacksize *= 2;
     pthread_attr_setstacksize(&attr, stacksize);
 
-    /* Ready to spawn our threads. We use the single argument the thread
+    /*
+     * Ready to spawn our threads. We use the single argument the thread
      * function accepts in order to pass the job ID the thread is
-     * responsible of. */
+     * responsible of.
+     */
     for (j = 0; j < BIO_NUM_OPS; j++) {
         void *arg = (void*)(unsigned long) j;
         if (pthread_create(&thread,&attr,bioProcessBackgroundJobs,arg) != 0) {
@@ -158,8 +174,10 @@ void *bioProcessBackgroundJobs(void *arg) {
         return NULL;
     }
 
-    /* Make the thread killable at any time, so that bioKillThreads()
-     * can work reliably. */
+    /*
+     * Make the thread killable at any time, so that bioKillThreads()
+     * can work reliably.
+     */
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
@@ -228,7 +246,8 @@ unsigned long long bioPendingJobsOfType(int type) {
     return val;
 }
 
-/* If there are pending jobs for the specified type, the function blocks
+/*
+ * If there are pending jobs for the specified type, the function blocks
  * and waits that the next job was processed. Otherwise the function
  * does not block and returns ASAP.
  *
