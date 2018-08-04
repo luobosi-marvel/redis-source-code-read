@@ -1317,15 +1317,18 @@ werr:
     return C_ERR;
 }
 
-/* Write a sequence of commands able to fully rebuild the dataset into
+/*
+ * Write a sequence of commands able to fully rebuild the dataset into
  * "filename". Used both by REWRITEAOF and BGREWRITEAOF.
  *
  * In order to minimize the number of commands needed in the rewritten
  * log Redis uses variadic commands when possible, such as RPUSH, SADD
  * and ZADD. However at max AOF_REWRITE_ITEMS_PER_CMD items per time
- * are inserted using a single command. */
+ * are inserted using a single command.
+ */
 int rewriteAppendOnlyFile(char *filename) {
     rio aof;
+    // 文件句柄
     FILE *fp;
     char tmpfile[256];
     char byte;
@@ -1360,12 +1363,14 @@ int rewriteAppendOnlyFile(char *filename) {
     if (fflush(fp) == EOF) goto werr;
     if (fsync(fileno(fp)) == -1) goto werr;
 
-    /* Read again a few times to get more data from the parent.
+    /*
+     * Read again a few times to get more data from the parent.
      * We can't read forever (the server may receive data from clients
      * faster than it is able to send data to the child), so we try to read
      * some more data in a loop as soon as there is a good chance more data
      * will come. If it looks like we are wasting time, we abort (this
-     * happens after 20 ms without new data). */
+     * happens after 20 ms without new data).
+     */
     int nodata = 0;
     mstime_t start = mstime();
     while(mstime()-start < 1000 && nodata < 20) {
@@ -1374,8 +1379,7 @@ int rewriteAppendOnlyFile(char *filename) {
             nodata++;
             continue;
         }
-        nodata = 0; /* Start counting from zero, we stop on N *contiguous*
-                       timeouts. */
+        nodata = 0; /* Start counting from zero, we stop on N *contiguous* timeouts. */
         aofReadDiffFromParent();
     }
 
