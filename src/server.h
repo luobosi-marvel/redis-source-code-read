@@ -1089,6 +1089,7 @@ struct redisServer {
     // BGSAVE 终止后重写 AOF 缓冲区标志。
     int aof_rewrite_scheduled;      /* Rewrite once BGSAVE terminates. */
     pid_t aof_child_pid;            /* PID if rewriting process */
+    // 重写缓冲区列表
     list *aof_rewrite_buf_blocks;   /* Hold changes during an AOF rewrite. */
     // todo: AOF 缓冲区
     sds aof_buf;      /* AOF buffer, written before entering the event loop */
