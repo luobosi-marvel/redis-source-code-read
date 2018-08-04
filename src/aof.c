@@ -61,9 +61,12 @@ void aofClosePipes(void);
  * TODO：问题一：Redis 是如何根据redis.conf 文件中配置的刷盘策略进行刷盘的？
  * TODO：问题二：Redis 的 AOF 和 RDB 可以同时进行持久化吗？
  * TODO：问题三：Redis 是怎么进行刷盘的，文件内容是怎么从内存呢中刷到硬盘中去的？
+ *               通过调用 fsync 或 fdatasync函数强制刷盘的，可以想一下 RocketMQ 是如何刷盘的，
+ *               且如何保证顺序写的？AOF 是不是也可以考虑顺序写到磁盘中去？
  * TODO：问题四：Redis 什么时候存在 AOF 重写缓冲区，新旧 AOF 文件是如何进行替换的？
  * TODO：问题五：Redis 是如何对 AOF 文件进行重写的？
  * TODO：问题六：Redis 重写缓冲区有多大？如果命令超过了重写缓冲区的大小怎么办？
+ * TODO：问题七：Redis 为什么不使用子线程来进行 AOF 重写，而是要使用子进程来进行重写？
  *
  * ------------------------------------------------------------------------- */
 // TODO: AOF 重写缓冲区10M
@@ -183,9 +186,11 @@ void aofRewriteBufferAppend(unsigned char *s, unsigned long len) {
     }
 }
 
-/* Write the buffer (possibly composed of multiple blocks) into the specified
+/* 
+ * Write the buffer (possibly composed of multiple blocks) into the specified
  * fd. If a short write or any other error happens -1 is returned,
- * otherwise the number of bytes written is returned. */
+ * otherwise the number of bytes written is returned. 
+ */
 ssize_t aofRewriteBufferWrite(int fd) {
     listNode *ln;
     listIter li;
@@ -1327,13 +1332,17 @@ werr:
     return C_ERR;
 }
 
-/* Write a sequence of commands able to fully rebuild the dataset into
+/* 
+ * TODO：AOF 重写文件的方法
+ *
+ * Write a sequence of commands able to fully rebuild the dataset into
  * "filename". Used both by REWRITEAOF and BGREWRITEAOF.
  *
  * In order to minimize the number of commands needed in the rewritten
  * log Redis uses variadic commands when possible, such as RPUSH, SADD
  * and ZADD. However at max AOF_REWRITE_ITEMS_PER_CMD items per time
- * are inserted using a single command. */
+ * are inserted using a single command. 
+ */
 int rewriteAppendOnlyFile(char *filename) {
     rio aof;
     FILE *fp;

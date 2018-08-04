@@ -1167,11 +1167,12 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
             }
          }
 
-         /* Trigger an AOF rewrite if needed. */
+         /* AOF 重写触发器 */
          if (server.aof_state == AOF_ON &&
              server.rdb_child_pid == -1 &&
              server.aof_child_pid == -1 &&
              server.aof_rewrite_perc &&
+             // 当前 aof 文件大小一定要大于 aof_rewrite_min_size 大小才会触发 AOF 重写
              server.aof_current_size > server.aof_rewrite_min_size)
          {
             long long base = server.aof_rewrite_base_size ?
@@ -1179,6 +1180,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
             long long growth = (server.aof_current_size*100/base) - 100;
             if (growth >= server.aof_rewrite_perc) {
                 serverLog(LL_NOTICE,"Starting automatic rewriting of AOF on %lld%% growth",growth);
+                // AOF 文件重写
                 rewriteAppendOnlyFileBackground();
             }
          }
