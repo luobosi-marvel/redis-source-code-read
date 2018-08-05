@@ -51,8 +51,9 @@ void freeClientMultiState(client *c) {
     }
     zfree(c->mstate.commands);
 }
+/
 
-/* Add a new command into the MULTI commands queue */
+/* 将新命令添加到MULTI命令队列中 */
 void queueMultiCommand(client *c) {
     multiCmd *mc;
     int j;
@@ -76,18 +77,28 @@ void discardTransaction(client *c) {
     unwatchAllKeys(c);
 }
 
-/* Flag the transacation as DIRTY_EXEC so that EXEC will fail.
- * Should be called every time there is an error while queueing a command. */
+/* 
+ * Flag the transacation as DIRTY_EXEC so that EXEC will fail.
+ * Should be called every time there is an error while queueing a command. 
+ *
+ * 将事务标记为DIRTY_EXEC，以便EXCEL失败。每次排队命令时都应该调用。
+ * 标识事务已经存在了
+ */
 void flagTransaction(client *c) {
     if (c->flags & CLIENT_MULTI)
         c->flags |= CLIENT_DIRTY_EXEC;
 }
 
+/**
+ * 事务执行的命令
+ */
 void multiCommand(client *c) {
+    // 事务不支持嵌套
     if (c->flags & CLIENT_MULTI) {
         addReplyError(c,"MULTI calls can not be nested");
         return;
     }
+    // 将客户端的 flags 标志位事务状态
     c->flags |= CLIENT_MULTI;
     addReply(c,shared.ok);
 }
@@ -111,25 +122,39 @@ void execCommandPropagateMulti(client *c) {
     decrRefCount(multistring);
 }
 
+/**
+ * 执行事务的命令
+ */
 void execCommand(client *c) {
     int j;
     robj **orig_argv;
     int orig_argc;
     struct redisCommand *orig_cmd;
+    // 是否需要将MULTI/EXEC命令传播到slave节点/AOF
     int must_propagate = 0; /* Need to propagate MULTI/EXEC to AOF / slaves? */
     int was_master = server.masterhost == NULL;
 
     if (!(c->flags & CLIENT_MULTI)) {
+        // 没事事务可以执行
         addReplyError(c,"EXEC without MULTI");
         return;
     }
 
-    /* Check if we need to abort the EXEC because:
+    /* 
+     * Check if we need to abort the EXEC because:
      * 1) Some WATCHed key was touched.
      * 2) There was a previous error while queueing commands.
      * A failed EXEC in the first case returns a multi bulk nil object
      * (technically it is not an error but a special behavior), while
-     * in the second an EXECABORT error is returned. */
+     * in the second an EXECABORT error is returned. 
+     *
+     * 检查我们是否需要丢弃该事务，原因如下：
+     * 1. 有一些被监控的 key 被修改了
+     * 2. 由于命令队列里面出现了错误
+     *
+     * 第一种情况下失败的EXEC返回一个多块nil对象
+     *（技术上它不是错误，而是特殊行为），而在第二个中返回EXECABORT错误。
+     */
     if (c->flags & (CLIENT_DIRTY_CAS|CLIENT_DIRTY_EXEC)) {
         addReply(c, c->flags & CLIENT_DIRTY_EXEC ? shared.execaborterr :
                                                   shared.nullmultibulk);
@@ -137,7 +162,10 @@ void execCommand(client *c) {
         goto handle_monitor;
     }
 
-    /* Exec all the queued commands */
+    /* 执行所有排队的命令 */
+
+    // 取消对所有key的监控，否则会浪费CPU资源, 因为 redis 是单线程
+    // 所以不用担心 key 再被修改了
     unwatchAllKeys(c); /* Unwatch ASAP otherwise we'll waste CPU cycles */
     orig_argv = c->argv;
     orig_argc = c->argc;
@@ -154,7 +182,7 @@ void execCommand(client *c) {
          * both the AOF and the replication link will have the same consistency
          * and atomicity guarantees. */
         if (!must_propagate && !(c->cmd->flags & (CMD_READONLY|CMD_ADMIN))) {
-            execCommandPropagateMulti(c);
+            execCommandPropagateMulti(c)
             must_propagate = 1;
         }
 
@@ -168,6 +196,7 @@ void execCommand(client *c) {
     c->argv = orig_argv;
     c->argc = orig_argc;
     c->cmd = orig_cmd;
+    // 清除事务状态
     discardTransaction(c);
 
     /* Make sure the EXEC command will be propagated as well if MULTI
@@ -213,7 +242,11 @@ typedef struct watchedKey {
     redisDb *db;
 } watchedKey;
 
-/* Watch for the specified key */
+/* 
+ * Watch for the specified key 
+ *
+ * 监控指定的 key
+ */
 void watchForKey(client *c, robj *key) {
     list *clients = NULL;
     listIter li;
@@ -224,11 +257,17 @@ void watchForKey(client *c, robj *key) {
     listRewind(c->watched_keys,&li);
     while((ln = listNext(&li))) {
         wk = listNodeValue(ln);
+        // 条件满足说明该 key 已经被 watched 了
         if (wk->db == c->db && equalStringObjects(key,wk->key))
             return; /* Key already watched */
     }
     /* This key is not already watched in this DB. Let's add it */
+    // 此DB中尚未监视此 key 。 我们加上吧
+    // 先从 c->db->watched_keys 中取出该 key 对应的客户端 client
     clients = dictFetchValue(c->db->watched_keys,key);
+    // 如果该 client 为 null，则说明该key 没有被 client 监控
+    // 则需要在该key 后面创建一个 client list 列表，用来保存
+    // 监控了该key 的客户端 client
     if (!clients) {
         clients = listCreate();
         dictAdd(c->db->watched_keys,key,clients);
@@ -236,10 +275,12 @@ void watchForKey(client *c, robj *key) {
     }
     listAddNodeTail(clients,c);
     /* Add the new key to the list of keys watched by this client */
+    // 将新 key 添加到此客户端 watched（监控） 的 key 列表中
     wk = zmalloc(sizeof(*wk));
     wk->key = key;
     wk->db = c->db;
     incrRefCount(key);
+    // 把 wk 赋值给指定的 client 的监控key的结构体重
     listAddNodeTail(c->watched_keys,wk);
 }
 
@@ -319,15 +360,21 @@ void touchWatchedKeysOnFlush(int dbid) {
     }
 }
 
+/**
+ * 这个就是 watch 命令执行步骤
+ */
 void watchCommand(client *c) {
     int j;
 
+    // 该命令只能出现在 multi 命令之前
     if (c->flags & CLIENT_MULTI) {
         addReplyError(c,"WATCH inside MULTI is not allowed");
         return;
     }
+    // 监控指定的 key
     for (j = 1; j < c->argc; j++)
         watchForKey(c,c->argv[j]);
+    // 像客户端缓冲区返回 ok
     addReply(c,shared.ok);
 }
 

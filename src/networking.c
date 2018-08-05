@@ -265,7 +265,11 @@ void _addReplyStringToList(client *c, const char *s, size_t len) {
  * The following functions are the ones that commands implementations will call.
  * -------------------------------------------------------------------------- */
 
-/* Add the object 'obj' string representation to the client output buffer. */
+/*
+ * Add the object 'obj' string representation to the client output buffer. 
+ *
+ * 将对象'obj'字符串表示添加到客户端输出缓冲区。
+ */
 void addReply(client *c, robj *obj) {
     if (prepareClientToWrite(c) != C_OK) return;
 

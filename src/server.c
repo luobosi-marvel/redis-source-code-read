@@ -2622,7 +2622,7 @@ int processCommand(client *c) {
         return C_OK;
     }
 
-    /* Exec the command */
+    /* Exec the command 这里就是事务命令执行的地方 */
     if (c->flags & CLIENT_MULTI &&
         c->cmd->proc != execCommand && c->cmd->proc != discardCommand &&
         c->cmd->proc != multiCommand && c->cmd->proc != watchCommand)
