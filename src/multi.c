@@ -31,6 +31,11 @@
 
 /**
  * TODO：事务值得注意的地方：
+ * 1. watch: 由于WATCH命令的作用只是当被监控的键被修改后取消之后的事务，
+ * 并不能保证其他客户端不修改监控的值，所以当EXEC命令执行失败之后需要
+ * 手动重新执行整个事务。
+ * 
+ *
 Redis事务错误处理
 如果一个事务中的某个命令执行出错，Redis会怎样处理呢？
 要回答这个问题，首先要搞清楚是什么原因导致命令执行出错：
@@ -47,18 +52,18 @@ Redis事务错误处理
 如果食物里有一条命令执行错误，其他命令依旧会执行
 （包括出错之后的命令）。比如下例：　
  *
- *
+ * 
  */
 
 /* ================================ MULTI/EXEC ============================== */
 
-/* Client state initialization for MULTI/EXEC */
+/* 当遇到 MULTI/EXEC 命令时会重新初始化该 client 的事务状态 */
 void initClientMultiState(client *c) {
     c->mstate.commands = NULL;
     c->mstate.count = 0;
 }
 
-/* Release all the resources associated with MULTI/EXEC state */
+/* 释放该 client 与MULTI / EXEC状态关联的所有资源 */
 void freeClientMultiState(client *c) {
     int j;
 
@@ -91,6 +96,9 @@ void queueMultiCommand(client *c) {
     c->mstate.count++;
 }
 
+/**
+ * 丢弃整个事务，比如遇到事务中的语法错误问题
+ */
 void discardTransaction(client *c) {
     freeClientMultiState(c);
     initClientMultiState(c);
@@ -124,6 +132,9 @@ void multiCommand(client *c) {
     addReply(c,shared.ok);
 }
 
+/**
+ * discard 命令，用来放弃整个事务的执行
+ */
 void discardCommand(client *c) {
     if (!(c->flags & CLIENT_MULTI)) {
         addReplyError(c,"DISCARD without MULTI");
@@ -177,6 +188,7 @@ void execCommand(client *c) {
      *（技术上它不是错误，而是特殊行为），而在第二个中返回EXECABORT错误。
      */
     if (c->flags & (CLIENT_DIRTY_CAS|CLIENT_DIRTY_EXEC)) {
+        
         addReply(c, c->flags & CLIENT_DIRTY_EXEC ? shared.execaborterr :
                                                   shared.nullmultibulk);
         discardTransaction(c);
@@ -301,7 +313,7 @@ void watchForKey(client *c, robj *key) {
     wk->key = key;
     wk->db = c->db;
     incrRefCount(key);
-    // 把 wk 赋值给指定的 client 的监控key的结构体重
+    // 把 wk 赋值给指定的 client 的监控key的结构体中
     listAddNodeTail(c->watched_keys,wk);
 }
 
