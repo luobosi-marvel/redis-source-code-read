@@ -36,21 +36,21 @@
  * 手动重新执行整个事务。
  * 
  *
-Redis事务错误处理
-如果一个事务中的某个命令执行出错，Redis会怎样处理呢？
-要回答这个问题，首先要搞清楚是什么原因导致命令执行出错：
-
-1. 语法错误 就像上面的例子一样，语法错误表示命令不存在或者参数错误
-这种情况需要区分Redis的版本，Redis 2.6.5之前的版本会忽略错误的命令，
-执行其他正确的命令，2.6.5之后的版本会忽略这个事务中的所有命令，都不执行，
-就比如上面的例子(使用的Redis版本是2.8的)
-
-2. 运行错误 运行错误表示命令在执行过程中出现错误，
-比如用GET命令获取一个散列表类型的键值。
-这种错误在命令执行之前Redis是无法发现的，
-所以在事务里这样的命令会被Redis接受并执行。
-如果食物里有一条命令执行错误，其他命令依旧会执行
-（包括出错之后的命令）。比如下例：　
+ * Redis事务错误处理
+ * 如果一个事务中的某个命令执行出错，Redis会怎样处理呢？
+ * 要回答这个问题，首先要搞清楚是什么原因导致命令执行出错：
+ *
+ * 1. 语法错误 就像上面的例子一样，语法错误表示命令不存在或者参数错误
+ * 这种情况需要区分Redis的版本，Redis 2.6.5之前的版本会忽略错误的命令，
+ * 执行其他正确的命令，2.6.5之后的版本会忽略这个事务中的所有命令，都不执行，
+ * 就比如上面的例子(使用的Redis版本是2.8的)
+ *
+ * 2. 运行错误 运行错误表示命令在执行过程中出现错误，
+ * 比如用GET命令获取一个散列表类型的键值。
+ * 这种错误在命令执行之前Redis是无法发现的，
+ * 所以在事务里这样的命令会被Redis接受并执行。
+ * 如果食物里有一条命令执行错误，其他命令依旧会执行
+ * （包括出错之后的命令）。比如下例：　
  *
  * 
  */
@@ -77,7 +77,6 @@ void freeClientMultiState(client *c) {
     }
     zfree(c->mstate.commands);
 }
-/
 
 /* 将新命令添加到MULTI命令队列中 */
 void queueMultiCommand(client *c) {
@@ -215,7 +214,7 @@ void execCommand(client *c) {
          * both the AOF and the replication link will have the same consistency
          * and atomicity guarantees. */
         if (!must_propagate && !(c->cmd->flags & (CMD_READONLY|CMD_ADMIN))) {
-            execCommandPropagateMulti(c)
+            execCommandPropagateMulti(c);
             must_propagate = 1;
         }
 
