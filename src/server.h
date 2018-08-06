@@ -1245,7 +1245,13 @@ struct redisServer {
     /* time cache */
     time_t unixtime;    /* Unix time sampled every cron cycle. */
     long long mstime;   /* Like 'unixtime' but with milliseconds resolution. */
-    /* Pubsub */
+
+    /*
+     * todo: Pubsub
+     *
+     * pubsub_channels: 订阅频道的字典表，key：频道 value：订阅该频道的客户端链表
+     * pubsub_patterns：订阅模式的字典表，key：模式 value：订阅该模式的客户端链表
+     */
     dict *pubsub_channels;  /* Map channels to list of subscribed clients */
     list *pubsub_patterns;  /* A list of pubsub_patterns */
     int notify_keyspace_events; /* Events to propagate via Pub/Sub. This is an
