@@ -33,7 +33,7 @@
 
 /* Node, List, and Iterator are the only data structures used currently. */
 /**
- * 这个结构体就是链表的结构体
+ * 链表的结构体
  */
 typedef struct listNode {
     // 前驱节点

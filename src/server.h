@@ -712,8 +712,12 @@ typedef struct readyList {
     robj *key;
 } readyList;
 
-/* With multiplexing we need to take per-client state.
- * Clients are taken in a linked list. */
+/*
+ * todo: client 结构体
+ *
+ * With multiplexing we need to take per-client state.
+ * Clients are taken in a linked list.
+ */
 typedef struct client {
     uint64_t id;            /* Client incremental unique ID. */
     // 客户端连接的 socket ，也就是句柄
@@ -769,6 +773,8 @@ typedef struct client {
     long long woff;         /* Last write global replication offset. */
     // 使用 watch 监控的所有 key
     list *watched_keys;     /* Keys WATCHED for MULTI/EXEC CAS */
+
+    // todo：client 中的感兴趣的频道和模式
     dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */
     list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */
     sds peerid;             /* Cached peer ID. */
@@ -1250,7 +1256,7 @@ struct redisServer {
      * todo: Pubsub
      *
      * pubsub_channels: 订阅频道的字典表，key：频道 value：订阅该频道的客户端链表
-     * pubsub_patterns：订阅模式的字典表，key：模式 value：订阅该模式的客户端链表
+     * pubsub_patterns：这里就是是一个 list
      */
     dict *pubsub_channels;  /* Map channels to list of subscribed clients */
     list *pubsub_patterns;  /* A list of pubsub_patterns */
@@ -1317,8 +1323,18 @@ struct redisServer {
     pthread_mutex_t unixtime_mutex;
 };
 
+/**
+ * 订阅模式的结构体
+ * 也就是 pubsub_patterns 链表中保存的结构
+ */
 typedef struct pubsubPattern {
+    /**
+     * 客户端
+     */
     client *client;
+    /**
+     * 模式
+     */
     robj *pattern;
 } pubsubPattern;
 
