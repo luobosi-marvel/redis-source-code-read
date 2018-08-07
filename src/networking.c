@@ -80,10 +80,12 @@ void linkClient(client *c) {
 client *createClient(int fd) {
     client *c = zmalloc(sizeof(client));
 
-    /* passing -1 as fd it is possible to create a non connected client.
+    /*
+     * passing -1 as fd it is possible to create a non connected client.
      * This is useful since all the commands needs to be executed
      * in the context of a client. When commands are executed in other
-     * contexts (for instance a Lua script) we need a non connected client. */
+     * contexts (for instance a Lua script) we need a non connected client.
+     */
     if (fd != -1) {
         anetNonBlock(NULL,fd);
         anetEnableTcpNoDelay(NULL,fd);

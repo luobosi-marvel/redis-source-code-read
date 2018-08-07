@@ -224,7 +224,14 @@ int pubsubUnsubscribeAllPatterns(client *c, int notify) {
     return count;
 }
 
-/* Publish a message */
+/**
+ * 发布一条消息
+ *
+ * 时间复杂度 O(N+M)，其中 N 是频道 channel 的订阅者数量，而 M 则是使用模式订阅(subscribed patterns)的客户端的数量。
+ * @param channel 频道
+ * @param message 消息体
+ * @return 接收到信息 message 的订阅者数量
+ */
 int pubsubPublishMessage(robj *channel, robj *message) {
     int receivers = 0;
     dictEntry *de;
@@ -239,6 +246,7 @@ int pubsubPublishMessage(robj *channel, robj *message) {
         listIter li;
 
         listRewind(list,&li);
+        // 循环整个订阅消息的列表，然后发送消息
         while ((ln = listNext(&li)) != NULL) {
             client *c = ln->value;
 
@@ -322,6 +330,11 @@ void punsubscribeCommand(client *c) {
     if (clientSubscriptionsCount(c) == 0) c->flags &= ~CLIENT_PUBSUB;
 }
 
+/**
+ * 将信息 message 发送到指定的频道 channel
+ *
+ * @param c
+ */
 void publishCommand(client *c) {
     int receivers = pubsubPublishMessage(c->argv[1],c->argv[2]);
     if (server.cluster_enabled)
