@@ -515,6 +515,12 @@ int aeWait(int fd, int mask, long long milliseconds) {
     }
 }
 
+/**
+ * todo: aeMain是AE的启动函数，也是AE的事件循环
+ * 主程序的循环也起始于这个函数：
+ *
+ * @param eventLoop
+ */
 void aeMain(aeEventLoop *eventLoop) {
     eventLoop->stop = 0;
     while (!eventLoop->stop) {

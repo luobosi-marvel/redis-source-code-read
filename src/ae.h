@@ -67,23 +67,41 @@ typedef int aeTimeProc(struct aeEventLoop *eventLoop, long long id, void *client
 typedef void aeEventFinalizerProc(struct aeEventLoop *eventLoop, void *clientData);
 typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 
-/* File event structure */
+/* 文件事件结构体 */
 typedef struct aeFileEvent {
+    /* 文件事件的类型：READABLE|WRITABLE */
     int mask; /* one of AE_(READABLE|WRITABLE|BARRIER) */
+    /*
+     * 函数指针(回调函数)
+     * 文件事件读处理器的函数指针，当前事件是读事件的时候就会调用该方法
+     */
     aeFileProc *rfileProc;
+    /*
+     * 函数指针(回调函数)
+     * 文件事件写处理器，当前事件是写事件的时候就会调用该方法
+     */
     aeFileProc *wfileProc;
+    // 客户端数据
     void *clientData;
 } aeFileEvent;
 
-/* Time event structure */
+/* 时间事件结构体 */
 typedef struct aeTimeEvent {
-    long long id; /* time event identifier. */
-    long when_sec; /* seconds */
-    long when_ms; /* milliseconds */
+    long long id; /* 时间事件id */
+    long when_sec; //时间事件到达的时间，精度为秒
+    long when_ms; //时间事件到达的时间，精度为毫秒
+    /*
+     * 函数指针(回调函数)
+     * 时间处理器
+     */
     aeTimeProc *timeProc;
+    //处理完时间事件的收尾方法
     aeEventFinalizerProc *finalizerProc;
+    // client 数据
     void *clientData;
+    // 前置指针，指向前面的时间事件
     struct aeTimeEvent *prev;
+    // 后置指针，指向后一个时间事件
     struct aeTimeEvent *next;
 } aeTimeEvent;
 
@@ -94,13 +112,24 @@ typedef struct aeFiredEvent {
 } aeFiredEvent;
 
 /* State of an event based program */
+
+/*
+ * 事件循环，这不仅是AE，也是Redis最重要的一个部分。它是一个结构体，里面保存着事件循环总体的信息，
+ * 比如：时间事件的链表头，最大的文件描述符，sleep前要执行的任务函数等。
+ */
 typedef struct aeEventLoop {
+    /* 当前注册的文件事件的最大文件描述符 */
     int maxfd;   /* highest file descriptor currently registered */
+    /* 注册文件事件的文件描述符的最大限制 */
     int setsize; /* max number of file descriptors tracked */
+    // 下一个时间事件id
     long long timeEventNextId;
     time_t lastTime;     /* Used to detect system clock skew */
+    // 注册的文件事件
     aeFileEvent *events; /* Registered events */
+    // 注册的 fired 事件
     aeFiredEvent *fired; /* Fired events */
+    // 注册的时间事件，这里是一个 链表
     aeTimeEvent *timeEventHead;
     int stop;
     void *apidata; /* This is used for polling API specific data */
@@ -122,6 +151,7 @@ long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
 int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id);
 int aeProcessEvents(aeEventLoop *eventLoop, int flags);
 int aeWait(int fd, int mask, long long milliseconds);
+/** aeMain是AE的启动函数，也是AE的事件循环,主程序的循环也起始于这个函数：*/
 void aeMain(aeEventLoop *eventLoop);
 char *aeGetApiName(void);
 void aeSetBeforeSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *beforesleep);
