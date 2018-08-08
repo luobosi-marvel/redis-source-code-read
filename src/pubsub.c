@@ -53,20 +53,29 @@ int clientSubscriptionsCount(client *c) {
            listLength(c->pubsub_patterns);
 }
 
-/* Subscribe a client to a channel. Returns 1 if the operation succeeded, or
- * 0 if the client was already subscribed to that channel. */
+/*
+ * 将客户订阅到频道。 如果操作成功，则返回1，如果客户端已订阅该频道，则为0。
+ */
 int pubsubSubscribeChannel(client *c, robj *channel) {
     dictEntry *de;
     list *clients = NULL;
     int retval = 0;
 
-    /* Add the channel to the client -> channels hash table */
+    /* 将 channel（频道）添加到 channel - >client 哈希表中 */
     if (dictAdd(c->pubsub_channels,channel,NULL) == DICT_OK) {
         retval = 1;
         incrRefCount(channel);
-        /* Add the client to the channel -> list of clients hash table */
+        /* 将客户端添加到 channel - >client list 哈希表中 */
+
+        /*
+         * 查找指定频道是否在 pubsub_channels 字典中存在，
+         * 如果存在直接将客户端添加到 clients 尾部即可。
+         * 否则创建一个 clients 链表，然后将 client 添加到 clients 中
+         */
         de = dictFind(server.pubsub_channels,channel);
+        // 如果根据该 channel 查出的值为 null，说明字典中还没有该频道信息
         if (de == NULL) {
+            // 从这里我们可以看出多个客户端是通过链表连接在一起的
             clients = listCreate();
             dictAdd(server.pubsub_channels,channel,clients);
             incrRefCount(channel);
@@ -75,7 +84,8 @@ int pubsubSubscribeChannel(client *c, robj *channel) {
         }
         listAddNodeTail(clients,c);
     }
-    /* Notify the client */
+
+    /* 通知 client */
     addReply(c,shared.mbulkhdr[3]);
     addReply(c,shared.subscribebulk);
     addReplyBulk(c,channel);
@@ -227,7 +237,9 @@ int pubsubUnsubscribeAllPatterns(client *c, int notify) {
 /**
  * 发布一条消息
  *
- * 时间复杂度 O(N+M)，其中 N 是频道 channel 的订阅者数量，而 M 则是使用模式订阅(subscribed patterns)的客户端的数量。
+ * 时间复杂度 O(N+M)，其中 N 是频道 channel 的订阅者数量，而 M 则是使用
+ * 模式订阅(subscribed patterns)的客户端的数量。
+ *
  * @param channel 频道
  * @param message 消息体
  * @return 接收到信息 message 的订阅者数量
@@ -238,9 +250,11 @@ int pubsubPublishMessage(robj *channel, robj *message) {
     listNode *ln;
     listIter li;
 
-    /* Send to clients listening for that channel */
+    /* 发送给监听该频道的客户端 */
+    // 根据键值 channel 从字典中获取 dictEntry 对象
     de = dictFind(server.pubsub_channels,channel);
     if (de) {
+        // 从 dictEntry 中获取监听 channel 的 client list
         list *list = dictGetVal(de);
         listNode *ln;
         listIter li;
@@ -249,7 +263,9 @@ int pubsubPublishMessage(robj *channel, robj *message) {
         // 循环整个订阅消息的列表，然后发送消息
         while ((ln = listNext(&li)) != NULL) {
             client *c = ln->value;
-
+            // 往指定的客户端输出缓冲区中发送消息
+            // todo: 如果 client 消费消息不及时，那么 client 输出缓冲区
+                    // 就会造成消息堆积，会使 redis 内存突然增大
             addReply(c,shared.mbulkhdr[3]);
             addReply(c,shared.messagebulk);
             addReplyBulk(c,channel);
@@ -257,17 +273,22 @@ int pubsubPublishMessage(robj *channel, robj *message) {
             receivers++;
         }
     }
-    /* Send to clients listening to matching channels */
+    /* 往监听了 channel 模式的 client 发送消息*/
     if (listLength(server.pubsub_patterns)) {
         listRewind(server.pubsub_patterns,&li);
         channel = getDecodedObject(channel);
+        // 循环整个模式链表
         while ((ln = listNext(&li)) != NULL) {
             pubsubPattern *pat = ln->value;
-
+            // 匹配指定的模式，找出指定模式对应的客户端，然后往
+                    // 订阅该模式的客户端发送消息
             if (stringmatchlen((char*)pat->pattern->ptr,
                                 sdslen(pat->pattern->ptr),
                                 (char*)channel->ptr,
                                 sdslen(channel->ptr),0)) {
+                // 往指定的客户端输出缓冲区中发送消息
+                // todo: 如果 client 消费消息不及时，那么 client 输出缓冲区
+                // 就会造成消息堆积，会使 redis 内存突然增大
                 addReply(pat->client,shared.mbulkhdr[4]);
                 addReply(pat->client,shared.pmessagebulk);
                 addReplyBulk(pat->client,pat->pattern);
