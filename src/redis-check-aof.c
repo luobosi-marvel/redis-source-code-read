@@ -39,7 +39,16 @@
 
 static char error[1024];
 static off_t epos;
+/**
+ * 要知道这个文件是干嘛的
+ */
 
+
+/**
+ *
+ * @param buf
+ * @return
+ */
 int consumeNewline(char *buf) {
     if (strncmp(buf,"\r\n",2) != 0) {
         ERROR("Expected \\r\\n, got: %02x%02x",buf[0],buf[1]);
