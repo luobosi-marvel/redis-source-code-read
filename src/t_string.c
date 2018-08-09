@@ -77,8 +77,8 @@ static int checkStringLength(client *c, long long size) {
  * @param abort_reply
  */
 void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire, int unit, robj *ok_reply, robj *abort_reply) {
-    long long milliseconds = 0; /* initialized to avoid any harmness warning */
     // 判断过期时间
+    long long milliseconds = 0; /* initialized to avoid any harmness warning */
     if (expire) {
         if (getLongLongFromObjectOrReply(c, expire, &milliseconds, NULL) != C_OK)
             return;

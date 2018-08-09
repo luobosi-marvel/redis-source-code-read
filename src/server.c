@@ -1320,7 +1320,8 @@ void afterSleep(struct aeEventLoop *eventLoop) {
  */
 void createSharedObjects(void) {
     int j;
-
+    // 这里的值都是要放到 Redis 输出缓冲区里面的，要返回给客户端的
+    // 所以都是按照 Redis 协议来赋值的
     shared.crlf = createObject(OBJ_STRING,sdsnew("\r\n"));
     shared.ok = createObject(OBJ_STRING,sdsnew("+OK\r\n"));
     shared.err = createObject(OBJ_STRING,sdsnew("-ERR\r\n"));
