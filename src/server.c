@@ -1390,6 +1390,8 @@ void createSharedObjects(void) {
     shared.lpush = createStringObject("LPUSH",5);
     shared.zpopmin = createStringObject("ZPOPMIN",7);
     shared.zpopmax = createStringObject("ZPOPMAX",7);
+
+    // 这里就是数字常量 [0, OBJ_SHARED_INTEGERS)
     for (j = 0; j < OBJ_SHARED_INTEGERS; j++) {
         shared.integers[j] =
             makeObjectShared(createObject(OBJ_STRING,(void*)(long)j));
@@ -1401,10 +1403,12 @@ void createSharedObjects(void) {
         shared.bulkhdr[j] = createObject(OBJ_STRING,
             sdscatprintf(sdsempty(),"$%d\r\n",j));
     }
-    /* The following two shared objects, minstring and maxstrings, are not
+    /*
+     * The following two shared objects, minstring and maxstrings, are not
      * actually used for their value but as a special object meaning
      * respectively the minimum possible string and the maximum possible
-     * string in string comparisons for the ZRANGEBYLEX command. */
+     * string in string comparisons for the ZRANGEBYLEX command.
+     */
     shared.minstring = sdsnew("minstring");
     shared.maxstring = sdsnew("maxstring");
 }

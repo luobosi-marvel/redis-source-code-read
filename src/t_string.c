@@ -64,6 +64,18 @@ static int checkStringLength(client *c, long long size) {
 #define OBJ_SET_EX (1<<2)     /* Set if time in seconds is given */
 #define OBJ_SET_PX (1<<3)     /* Set if time in ms in given */
 
+/**
+ * set 命令的总方法
+ *
+ * @param c             客户端对象
+ * @param flags         set 类型（OBJ_SET_NX、OBJ_SET_XX、OBJ_SET_EX、OBJ_SET_PX）
+ * @param key           key
+ * @param val           value
+ * @param expire        过期时间
+ * @param unit
+ * @param ok_reply
+ * @param abort_reply
+ */
 void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire, int unit, robj *ok_reply, robj *abort_reply) {
     long long milliseconds = 0; /* initialized to avoid any harmness warning */
     // 判断过期时间
@@ -71,15 +83,14 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
         if (getLongLongFromObjectOrReply(c, expire, &milliseconds, NULL) != C_OK)
             return;
         if (milliseconds <= 0) {
-            addReplyErrorFormat(c,"invalid expire time in %s",c->cmd->name);
+            addReplyErrorFormat(c, "invalid expire time in %s", c->cmd->name);
             return;
         }
         if (unit == UNIT_SECONDS) milliseconds *= 1000;
     }
 
     if ((flags & OBJ_SET_NX && lookupKeyWrite(c->db,key) != NULL) ||
-        (flags & OBJ_SET_XX && lookupKeyWrite(c->db,key) == NULL))
-    {
+            (flags & OBJ_SET_XX && lookupKeyWrite(c->db,key) == NULL)) {
         addReply(c, abort_reply ? abort_reply : shared.nullbulk);
         return;
     }
@@ -89,7 +100,7 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
     if (expire) setExpire(c,c->db,key,mstime()+milliseconds);
     notifyKeyspaceEvent(NOTIFY_STRING,"set",key,c->db->id);
     if (expire) notifyKeyspaceEvent(NOTIFY_GENERIC,
-        "expire",key,c->db->id);
+                                    "expire", key, c->db->id);
     addReply(c, ok_reply ? ok_reply : shared.ok);
 }
 
@@ -140,9 +151,19 @@ void setCommand(client *c) {
     setGenericCommand(c,flags,c->argv[1],c->argv[2],expire,unit,NULL,NULL);
 }
 
+/**
+ * todo：常用来当做分布式锁
+ * 将 key 的值设为 value ，当且仅当 key 不存在。若给定的 key 已经存在，则 SETNX 不做任何动作。
+ * 就好比上茅坑，如果茅坑里面有人，那我就不上了，如果没有人我就上，那么别人也就上不了
+ *
+ * SET if Not eXists
+ * @param c
+ */
 void setnxCommand(client *c) {
+    // 尝试计算并获取指定值的编码类型
     c->argv[2] = tryObjectEncoding(c->argv[2]);
-    setGenericCommand(c,OBJ_SET_NX,c->argv[1],c->argv[2],NULL,0,shared.cone,shared.czero);
+    // 这里才是实际的方法
+    setGenericCommand(c, OBJ_SET_NX, c->argv[1], c->argv[2], NULL, 0, shared.cone, shared.czero);
 }
 
 void setexCommand(client *c) {
