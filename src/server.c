@@ -1315,6 +1315,9 @@ void afterSleep(struct aeEventLoop *eventLoop) {
 
 /* =========================== Server initialization ======================== */
 
+/*
+ * Redis 共享变量赋值
+ */
 void createSharedObjects(void) {
     int j;
 

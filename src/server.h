@@ -803,8 +803,11 @@ struct moduleLoadQueueEntry {
 };
 
 /**
- * todo: Redis 常量
+ * todo: Redis 共享变量
  * 共享对象结构体
+ * 
+ * 这里面有部分值是要放到输出缓冲区里面的，为了保证内存中只有一份值，所以
+ * 可以将这些对象共享起来，这样可以节约内存。
  */
 struct sharedObjectsStruct {
     robj *crlf, *ok, *err, *emptybulk, *czero, *cone, *cnegone, *pong, *space,
