@@ -282,8 +282,15 @@ uint32_t sdigits10(int64_t v) {
  * https://www.facebook.com/notes/facebook-engineering/three-optimization-tips-for-c/10151361643253920
  *
  * Modified in order to handle signed integers since the original code was
- * designed for unsigned integers. */
+ * designed for unsigned integers.
+ */
 int ll2string(char *dst, size_t dstlen, long long svalue) {
+
+    /*
+     * digits数据就是对100取模的所有值组成的字符串
+     *
+     * 就是00,01,02,03,04,05,06,07,08,09,10,11,12,13,14.....97,98,99.
+     */
     static const char digits[201] =
         "0001020304050607080910111213141516171819"
         "2021222324252627282930313233343536373839"
@@ -318,15 +325,26 @@ int ll2string(char *dst, size_t dstlen, long long svalue) {
     uint32_t next = length;
     dst[next] = '\0';
     next--;
+    //每次取100的余数，然后参照digits找到对应的字符赋值
     while (value >= 100) {
+        /*
+         * 拿 value = 9876532 来举例，要把这个数转换成 |9|8|7|6|5|3|2|'\0'|
+         * length = 7，next = 6
+         * value % 100 = 32 , 然后拿 32 * 2 = 64 是为了计算 32 在digits 中的位置
+         * （因为都是2位，所以乘以2可以直接找到下标）
+         * 仔细瞧，我们发现 32 在 digits[64]、digits[65] 号位置。那么接下来直接
+         * 给 dst[next] 赋值即可。
+         */
         int const i = (value % 100) * 2;
         value /= 100;
+        // 计算数组中 dst[6] 里面的值
         dst[next] = digits[i + 1];
+        // 计算驻足中 dst[5] 里面的值
         dst[next - 1] = digits[i];
         next -= 2;
     }
 
-    /* Handle last 1-2 digits. */
+    /* 计算 value < 100 的情况 */
     if (value < 10) {
         dst[next] = '0' + (uint32_t) value;
     } else {
