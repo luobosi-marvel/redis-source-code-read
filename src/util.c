@@ -229,15 +229,23 @@ long long memtoll(const char *p, int *err) {
     return val*mul;
 }
 
-/* Return the number of digits of 'v' when converted to string in radix 10.
- * See ll2string() for more information. */
+/*
+ * Return the number of digits of 'v' when converted to string in radix 10.
+ * See ll2string() for more information.
+ *
+ * 求一个数字的长度
+ */
 uint32_t digits10(uint64_t v) {
     if (v < 10) return 1;
     if (v < 100) return 2;
     if (v < 1000) return 3;
+    // v < 一万亿  10000000w
     if (v < 1000000000000UL) {
+        // v < 10000w
         if (v < 100000000UL) {
+            // v < 100w
             if (v < 1000000) {
+                // v < 1w
                 if (v < 10000) return 4;
                 return 5 + (v >= 100000);
             }
@@ -248,6 +256,7 @@ uint32_t digits10(uint64_t v) {
         }
         return 11 + (v >= 100000000000UL);
     }
+    // 来个递归
     return 12 + digits10(v / 1000000000000UL);
 }
 
@@ -281,6 +290,7 @@ int ll2string(char *dst, size_t dstlen, long long svalue) {
         "4041424344454647484950515253545556575859"
         "6061626364656667686970717273747576777879"
         "8081828384858687888990919293949596979899";
+    // 正负标识
     int negative;
     unsigned long long value;
 
@@ -292,13 +302,15 @@ int ll2string(char *dst, size_t dstlen, long long svalue) {
         } else {
             value = ((unsigned long long) LLONG_MAX)+1;
         }
+        // 负数
         negative = 1;
     } else {
         value = svalue;
+        // 正数
         negative = 0;
     }
 
-    /* Check length. */
+    /* Check length. 检查数字的长度 */
     uint32_t const length = digits10(value)+negative;
     if (length >= dstlen) return 0;
 
@@ -328,7 +340,8 @@ int ll2string(char *dst, size_t dstlen, long long svalue) {
     return length;
 }
 
-/* Convert a string into a long long. Returns 1 if the string could be parsed
+/*
+ * Convert a string into a long long. Returns 1 if the string could be parsed
  * into a (non-overflowing) long long, 0 otherwise. The value will be set to
  * the parsed value when appropriate.
  *
@@ -339,13 +352,15 @@ int ll2string(char *dst, size_t dstlen, long long svalue) {
  *
  * Because of its strictness, it is safe to use this function to check if
  * you can convert a string into a long long, and obtain back the string
- * from the number without any loss in the string representation. */
+ * from the number without any loss in the string representation.
+ *
+ */
 int string2ll(const char *s, size_t slen, long long *value) {
     const char *p = s;
     size_t plen = 0;
     int negative = 0;
     unsigned long long v;
-
+    // 说明就是 0
     if (plen == slen)
         return 0;
 
@@ -366,6 +381,8 @@ int string2ll(const char *s, size_t slen, long long *value) {
 
     /* First digit should be 1-9, otherwise the string should just be 0. */
     if (p[0] >= '1' && p[0] <= '9') {
+        // 这里就是直接根据 ASCII 码来计算的
+        // '0' = 48 ~  '9' = 57   所以 p[i] - '0' = 数字具体值
         v = p[0]-'0';
         p++; plen++;
     } else if (p[0] == '0' && slen == 1) {
@@ -383,8 +400,9 @@ int string2ll(const char *s, size_t slen, long long *value) {
         if (v > (ULLONG_MAX - (p[0]-'0'))) /* Overflow. */
             return 0;
         v += p[0]-'0';
-
-        p++; plen++;
+        // 注意这里的 p++ 是地址的移动，指针 p ++ 操作
+        p++;
+        plen++;
     }
 
     /* Return if not all bytes were used. */

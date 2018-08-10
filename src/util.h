@@ -33,22 +33,69 @@
 #include <stdint.h>
 #include "sds.h"
 
-/* The maximum number of characters needed to represent a long double
+/*
+ * The maximum number of characters needed to represent a long double
  * as a string (long double has a huge range).
- * This should be the size of the buffer given to ld2string */
+ * This should be the size of the buffer given to ld2string
+ */
 #define MAX_LONG_DOUBLE_CHARS 5*1024
 
 int stringmatchlen(const char *p, int plen, const char *s, int slen, int nocase);
+/**
+ * 字符串匹配
+ *
+ * @param p
+ * @param s
+ * @param nocase
+ * @return
+ */
 int stringmatch(const char *p, const char *s, int nocase);
 long long memtoll(const char *p, int *err);
+/**
+ * unit64_t = 2^64 - 1
+ * 求一个数字的长度
+ *
+ * @param v
+ * @return
+ */
 uint32_t digits10(uint64_t v);
 uint32_t sdigits10(int64_t v);
+/**
+ * 将 long long 类型转换成字符串
+ *
+ * @param s
+ * @param len
+ * @param value
+ * @return
+ */
 int ll2string(char *s, size_t len, long long value);
+/**
+ * 将字符串装换成 long long 类型
+ *
+ * @param s         字符串
+ * @param slen      字符串长度
+ * @param value     long long value 指针
+ * @return          length
+ */
 int string2ll(const char *s, size_t slen, long long *value);
+/**
+ * 把字符串转换成 long 类型的整数
+ *
+ * @param s         字符串
+ * @param slen      字符串长度
+ * @param value     long value 指针，转换之后的值要存里面
+ * @return          length
+ */
 int string2l(const char *s, size_t slen, long *value);
 int string2ld(const char *s, size_t slen, long double *dp);
 int d2string(char *buf, size_t len, double value);
 int ld2string(char *buf, size_t len, long double value, int humanfriendly);
+/**
+ * 获取文件的绝对路径
+ *
+ * @param filename 文件名称
+ * @return 返回路径
+ */
 sds getAbsolutePath(char *filename);
 int pathIsBaseName(char *path);
 
