@@ -547,8 +547,12 @@ typedef struct RedisModuleIO {
     struct RedisModuleCtx *ctx; /* Optional context, see RM_GetContextFromIO()*/
 } RedisModuleIO;
 
-/* Macro to initialize an IO context. Note that the 'ver' field is populated
- * inside rdb.c according to the version of the value to load. */
+/*
+ * 用do{}while(0)语句包含多语句防止错误 , 具体宏定义格式可以百度， \起到换行作用
+ *
+ * Macro to initialize an IO context. Note that the 'ver' field is populated
+ * inside rdb.c according to the version of the value to load.
+ */
 #define moduleInitIOContext(iovar,mtype,rioptr) do { \
     iovar.rio = rioptr; \
     iovar.type = mtype; \
