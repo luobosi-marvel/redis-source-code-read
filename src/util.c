@@ -43,12 +43,17 @@
 #include "util.h"
 #include "sha1.h"
 
-/* Glob-style pattern matching. */
+/**
+ * Glob-style pattern matching.
+ * 要知道什么是 glob 风格的模式匹配？
+ *
+ *
+ */
 int stringmatchlen(const char *pattern, int patternLen,
-        const char *string, int stringLen, int nocase)
-{
+        const char *string, int stringLen, int nocase) {
     while(patternLen) {
         switch(pattern[0]) {
+            // 如果通配符是 *
         case '*':
             while (pattern[1] == '*') {
                 pattern++;
@@ -357,6 +362,7 @@ int ll2string(char *dst, size_t dstlen, long long svalue) {
     if (negative) dst[0] = '-';
     return length;
 }
+
 
 /*
  * Convert a string into a long long. Returns 1 if the string could be parsed
