@@ -170,6 +170,14 @@ static const uint64_t crc64_tab[256] = {
     UINT64_C(0x536fa08fdfd90e51), UINT64_C(0x29b7d047efec8728),
 };
 
+/**
+ * 冗余校验 crc64 具体实现
+ *
+ * @param crc
+ * @param s
+ * @param l
+ * @return
+ */
 uint64_t crc64(uint64_t crc, const unsigned char *s, uint64_t l) {
     uint64_t j;
 
