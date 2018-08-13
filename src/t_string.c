@@ -89,6 +89,8 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
         if (unit == UNIT_SECONDS) milliseconds *= 1000;
     }
 
+    // 如果是 OBJ_SET_NX 或者是 OBJ_SET_XX 命令，则先判断指定 key 是否已经在db 中存在了
+    // 如果存在则直接返回，并回复一个 nullbulk('$-1') 的共享变量
     if ((flags & OBJ_SET_NX && lookupKeyWrite(c->db,key) != NULL) ||
             (flags & OBJ_SET_XX && lookupKeyWrite(c->db,key) == NULL)) {
         addReply(c, abort_reply ? abort_reply : shared.nullbulk);
@@ -166,11 +168,24 @@ void setnxCommand(client *c) {
     setGenericCommand(c, OBJ_SET_NX, c->argv[1], c->argv[2], NULL, 0, shared.cone, shared.czero);
 }
 
+/**
+ * 将值 value 关联到 key ，并将 key 的生存时间设为 seconds (以秒为单位)。
+ * 如果 key 已经存在， SETEX 命令将覆写旧值。
+ * 不同之处是， SETEX 是一个原子性(atomic)操作，关联值和设置生存时间两个动作会在同一时间内完成，
+ * 该命令在 Redis 用作缓存时，非常实用。
+ *
+ * @param c
+ */
 void setexCommand(client *c) {
     c->argv[3] = tryObjectEncoding(c->argv[3]);
     setGenericCommand(c,OBJ_SET_NO_FLAGS,c->argv[1],c->argv[3],c->argv[2],UNIT_SECONDS,NULL,NULL);
 }
 
+/**
+ * 这个命令和 SETEX 命令相似，但它以毫秒为单位设置 key 的生存时间，而不是像 SETEX 命令那样，以秒为单位
+ * PSETEX key milliseconds value
+ * @param c
+ */
 void psetexCommand(client *c) {
     c->argv[3] = tryObjectEncoding(c->argv[3]);
     setGenericCommand(c,OBJ_SET_NO_FLAGS,c->argv[1],c->argv[3],c->argv[2],UNIT_MILLISECONDS,NULL,NULL);
@@ -191,14 +206,22 @@ int getGenericCommand(client *c) {
     }
 }
 
+
 void getCommand(client *c) {
     getGenericCommand(c);
 }
 
+/**
+ * 将给定 key 的值设为 value ，并返回 key 的旧值(old value)。
+ * 当 key 存在但不是字符串类型时，返回一个错误。
+ *
+ * @param c
+ */
 void getsetCommand(client *c) {
     if (getGenericCommand(c) == C_ERR) return;
     c->argv[2] = tryObjectEncoding(c->argv[2]);
     setKey(c->db,c->argv[1],c->argv[2]);
+    // todo: 通知 keySpace
     notifyKeyspaceEvent(NOTIFY_STRING,"set",c->argv[1],c->db->id);
     server.dirty++;
 }
