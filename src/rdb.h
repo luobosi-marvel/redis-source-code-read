@@ -123,10 +123,26 @@
 
 #define RDB_SAVE_NONE 0
 #define RDB_SAVE_AOF_PREAMBLE (1<<0)
+/*
+ * RDB 持久化既可以手动执行，也可以根据服务器配置选项定期执行，
+ * 该功能可以将某个时间点上的数据库状态保存到一个 RDB 文件中。
+ *
+ * RDB 持久化功能所生成的 RDB 文件是一个经过压缩的二进制文件，
+ * 通过该文件可以还原生成 RDB 文件时的 数据库状态。
+ */
+
+
+
 
 int rdbSaveType(rio *rdb, unsigned char type);
 int rdbLoadType(rio *rdb);
 int rdbSaveTime(rio *rdb, time_t t);
+/**
+ * 加载 rdb 文件所花费的时间
+ *
+ * @param rdb
+ * @return
+ */
 time_t rdbLoadTime(rio *rdb);
 int rdbSaveLen(rio *rdb, uint64_t len);
 int rdbSaveMillisecondTime(rio *rdb, long long t);
@@ -135,10 +151,34 @@ uint64_t rdbLoadLen(rio *rdb, int *isencoded);
 int rdbLoadLenByRef(rio *rdb, int *isencoded, uint64_t *lenptr);
 int rdbSaveObjectType(rio *rdb, robj *o);
 int rdbLoadObjectType(rio *rdb);
+
+/**
+ * 载入 RDB 文件
+ *
+ * @param filename  文件名
+ * @param rsi
+ * @return
+ */
 int rdbLoad(char *filename, rdbSaveInfo *rsi);
+
+/**
+ * 后台线程保存 RDB 文件（非阻塞）
+ *
+ * @param filename
+ * @param rsi
+ * @return
+ */
 int rdbSaveBackground(char *filename, rdbSaveInfo *rsi);
 int rdbSaveToSlavesSockets(rdbSaveInfo *rsi);
 void rdbRemoveTempFile(pid_t childpid);
+
+/**
+ * 创建 RDB 文件（阻塞）
+ *
+ * @param filename  文件名
+ * @param rsi
+ * @return
+ */
 int rdbSave(char *filename, rdbSaveInfo *rsi);
 ssize_t rdbSaveObject(rio *rdb, robj *o);
 size_t rdbSavedObjectLen(robj *o);

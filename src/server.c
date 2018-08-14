@@ -1143,15 +1143,23 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
             closeChildInfoPipe();
         }
     } else {
-        /* If there is not a background saving/rewrite in progress check if
-         * we have to save/rewrite now. */
+        /*
+         * RDB 持久化
+         *
+         * If there is not a background saving/rewrite in progress check if
+         * we have to save/rewrite now.
+         */
          for (j = 0; j < server.saveparamslen; j++) {
             struct saveparam *sp = server.saveparams+j;
 
-            /* Save if we reached the given amount of changes,
+            /*
+             * Save if we reached the given amount of changes,
              * the given amount of seconds, and if the latest bgsave was
              * successful or if, in case of an error, at least
-             * CONFIG_BGSAVE_RETRY_DELAY seconds already elapsed. */
+             * CONFIG_BGSAVE_RETRY_DELAY seconds already elapsed.
+             *
+             * 判断自动保存间隔
+             */
             if (server.dirty >= sp->changes &&
                 server.unixtime-server.lastsave > sp->seconds &&
                 (server.unixtime-server.lastbgsave_try >
@@ -1162,6 +1170,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
                     sp->changes, (int)sp->seconds);
                 rdbSaveInfo rsi, *rsiptr;
                 rsiptr = rdbPopulateSaveInfo(&rsi);
+                // 后台持久化操作
                 rdbSaveBackground(server.rdb_filename,rsiptr);
                 break;
             }
@@ -1332,6 +1341,7 @@ void createSharedObjects(void) {
     shared.nullbulk = createObject(OBJ_STRING,sdsnew("$-1\r\n"));
     shared.nullmultibulk = createObject(OBJ_STRING,sdsnew("*-1\r\n"));
     shared.emptymultibulk = createObject(OBJ_STRING,sdsnew("*0\r\n"));
+    // 客户端发送 ping 命令时，服务端会发送 pong 命令
     shared.pong = createObject(OBJ_STRING,sdsnew("+PONG\r\n"));
     shared.queued = createObject(OBJ_STRING,sdsnew("+QUEUED\r\n"));
     shared.emptyscan = createObject(OBJ_STRING,sdsnew("*2\r\n$1\r\n0\r\n*0\r\n"));

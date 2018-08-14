@@ -923,14 +923,16 @@ struct redisMemOverhead {
     } *db;
 };
 
-/* This structure can be optionally passed to RDB save/load functions in
+/*
+ * This structure can be optionally passed to RDB save/load functions in
  * order to implement additional functionalities, by storing and loading
  * metadata to the RDB file.
  *
  * Currently the only use is to select a DB at load time, useful in
  * replication in order to make sure that chained slaves (slaves of slaves)
  * select the correct DB and are able to accept the stream coming from the
- * top-level master. */
+ * top-level master.
+ */
 typedef struct rdbSaveInfo {
     /* Used saving and loading. */
     int repl_stream_db;  /* DB to select in server.master client. */
@@ -1140,14 +1142,20 @@ struct redisServer {
 
 
     /* RDB persistence */
+    // dirty 计数器纪录距离上次成功执行 SAVE 命令或者 BGSAVE 命令之后，服务器对数据库状态
+    // (服务器中的所有数据库)进行了多少次修改(包括写入、删除、更新等操作)
     long long dirty;                /* Changes to DB from the last save */
     long long dirty_before_bgsave;  /* Used to restore dirty on failed BGSAVE */
     pid_t rdb_child_pid;            /* PID of RDB saving child */
+    // 数组
     struct saveparam *saveparams;   /* Save points array for RDB */
     int saveparamslen;              /* Number of saving points */
     char *rdb_filename;             /* Name of RDB file */
     int rdb_compression;            /* Use compression in RDB? */
     int rdb_checksum;               /* Use RDB checksum? */
+    /**
+     * 是一个 UNIX 时间戳，纪录了服务器上一次成功执行 SAVE 命令或者 BGSAVE 命令的时间
+     */
     time_t lastsave;                /* Unix time of last successful save */
     time_t lastbgsave_try;          /* Unix time of last attempted bgsave */
     time_t rdb_save_time_last;      /* Time used by last RDB save run. */
