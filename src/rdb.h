@@ -129,6 +129,23 @@
  *
  * RDB 持久化功能所生成的 RDB 文件是一个经过压缩的二进制文件，
  * 通过该文件可以还原生成 RDB 文件时的 数据库状态。
+ *
+ * 服务器在载入 RDB 文件期间，会一直处于阻塞状态，知道载入工作完成为止。
+ *
+ * BGSAVE 执行的时候，服务器可以继续处理客户端的命令请求，但是，在 BGSAVE
+ * 命令执行期间，服务器处理 SAVE、BGSAVE、BGREWRITEAOF 三个命令的方式会和
+ * 平时有所不同：
+ *
+ *      在 BGSAVE 命令执行期间，client 发送 SAVE 会被服务器拒绝，避免父进程和
+ *      子进程同时执行两个 rdbSave 调用，防止竞争条件。
+ *
+ *      在 BGSAVE 命令执行期间，client 发送的 BGSAVE 命令会被服务器拒绝，因为
+ *      同时执行两个 BGSAVE 命令也会产生竞争条件。
+ *
+ *      BGSAVE、BGREWRITEAOF 不能同时执行：
+ *      ① 如果 BGSAVE 命令正在执行，那么 client 发送的 BGREWRITEAOF 命令会被延迟
+ *      到 BGSAVE 命令执行完毕之后执行。
+ *      ② 如果 BGREWRITEAOF 命令正在执行，那么 BGSAVE 会被服务器直接拒绝
  */
 
 
