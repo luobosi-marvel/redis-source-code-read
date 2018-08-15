@@ -285,20 +285,34 @@ void rioFreeFdset(rio *r) {
 
 /* ---------------------------- Generic functions ---------------------------- */
 
-/* This function can be installed both in memory and file streams when checksum
- * computation is needed. */
+/*
+ * This function can be installed both in memory and file streams when checksum
+ * computation is needed.
+ *
+ * 需要计算校验和时，此函数可以安装在内存和文件流中
+ */
 void rioGenericUpdateChecksum(rio *r, const void *buf, size_t len) {
     r->cksum = crc64(r->cksum,buf,len);
 }
 
-/* Set the file-based rio object to auto-fsync every 'bytes' file written.
+/*
+ * Set the file-based rio object to auto-fsync every 'bytes' file written.
  * By default this is set to zero that means no automatic file sync is
  * performed.
  *
  * This feature is useful in a few contexts since when we rely on OS write
  * buffers sometimes the OS buffers way too much, resulting in too many
  * disk I/O concentrated in very little time. When we fsync in an explicit
- * way instead the I/O pressure is more distributed across time. */
+ * way instead the I/O pressure is more distributed across time.
+ *
+ * 将基于文件的 rio 对象设置为 auto-fsync 写入的每个 “bytes”文件。
+ * 默认情况下，该值设置为 0，表示没有自动文件同步执行。
+ * 当我们依赖于 OS 写入时，此功能在一些上下文中很有用，缓冲区有时
+ * OS 缓冲区太多，导致太多磁盘 I/O 集中在很短的时间内。
+ * 当我们显式的 fsync，I/O 压力在时间上更加分散。
+ *
+ * 其实就是减小磁盘 I/O 的压力。
+ */
 void rioSetAutoSync(rio *r, off_t bytes) {
     serverAssert(r->read == rioFileIO.read);
     r->io.file.autosync = bytes;

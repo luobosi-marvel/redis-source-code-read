@@ -1091,14 +1091,16 @@ int rdbSaveInfoAuxFields(rio *rdb, int flags, rdbSaveInfo *rsi) {
     return 1;
 }
 
-/* Produces a dump of the database in RDB format sending it to the specified
+/*
+ * Produces a dump of the database in RDB format sending it to the specified
  * Redis I/O channel. On success C_OK is returned, otherwise C_ERR
  * is returned and part of the output, or all the output, can be
  * missing because of I/O errors.
  *
  * When the function returns C_ERR and if 'error' is not NULL, the
  * integer pointed by 'error' is set to the value of errno just after the I/O
- * error. */
+ * error.
+ */
 int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
     dictIterator *di = NULL;
     dictEntry *de;
@@ -1144,9 +1146,11 @@ int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
             expire = getExpire(db,&key);
             if (rdbSaveKeyValuePair(rdb,&key,o,expire) == -1) goto werr;
 
-            /* When this RDB is produced as part of an AOF rewrite, move
+            /*
+             * When this RDB is produced as part of an AOF rewrite, move
              * accumulated diff from parent to child while rewriting in
-             * order to have a smaller final write. */
+             * order to have a smaller final write.
+             */
             if (flags & RDB_SAVE_AOF_PREAMBLE &&
                 rdb->processed_bytes > processed+AOF_READ_DIFF_INTERVAL_BYTES)
             {
@@ -1158,10 +1162,12 @@ int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi) {
         di = NULL; /* So that we don't release it again on error. */
     }
 
-    /* If we are storing the replication information on disk, persist
+    /*
+     * If we are storing the replication information on disk, persist
      * the script cache as well: on successful PSYNC after a restart, we need
      * to be able to process any EVALSHA inside the replication backlog the
-     * master will send us. */
+     * master will send us.
+     */
     if (rsi && dictSize(server.lua_scripts)) {
         di = dictGetIterator(server.lua_scripts);
         while((de = dictNext(di)) != NULL) {
@@ -1215,16 +1221,23 @@ werr: /* Write error. */
     return C_ERR;
 }
 
-/* Save the DB on disk. Return C_ERR on error, C_OK on success. */
+/**
+ * 将数据信息保存到 磁盘中去
+ * Save the DB on disk. Return C_ERR on error, C_OK on success.
+ */
 int rdbSave(char *filename, rdbSaveInfo *rsi) {
+    // 临时文件缓冲区
     char tmpfile[256];
     char cwd[MAXPATHLEN]; /* Current working dir path for error messages. */
+    // 定义一个名叫fp文件指针
     FILE *fp;
     rio rdb;
     int error = 0;
 
     snprintf(tmpfile,256,"temp-%d.rdb", (int) getpid());
+    // 按读方式打开 tmpfile 的文件
     fp = fopen(tmpfile,"w");
+    // 判断文件打开是否成功
     if (!fp) {
         char *cwdp = getcwd(cwd,MAXPATHLEN);
         serverLog(LL_WARNING,
@@ -1236,9 +1249,12 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
         return C_ERR;
     }
 
-    rioInitWithFile(&rdb,fp);
+    // TODO: 这个方法不知道要干嘛？
+    rioInitWithFilerioInitWithFile(&rdb,fp);
 
+    // rdb 保存是否逐步增加 fsync
     if (server.rdb_save_incremental_fsync)
+        // 每次同步 REDIS_AUTOSYNC_BYTES = 32M
         rioSetAutoSync(&rdb,REDIS_AUTOSYNC_BYTES);
 
     if (rdbSaveRio(&rdb,&error,RDB_SAVE_NONE,rsi) == C_ERR) {
@@ -1246,13 +1262,23 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
         goto werr;
     }
 
-    /* Make sure data will not remain on the OS's output buffers */
+    /*
+     * Make sure data will not remain on the OS's output buffers
+     * 确保数据不会保存在 OS 的输出缓冲区中
+     */
     if (fflush(fp) == EOF) goto werr;
     if (fsync(fileno(fp)) == -1) goto werr;
     if (fclose(fp) == EOF) goto werr;
 
-    /* Use RENAME to make sure the DB file is changed atomically only
-     * if the generate DB file is ok. */
+    /*
+     * Use RENAME to make sure the DB file is changed atomically only
+     * if the generate DB file is ok.
+     * todo: 使用 rename 函数确保 tmpfile 文件已经写入到磁盘当中了
+     *
+     * 函数rename()用于重命名文件、改变文件路径或更改目录名称，其原型为
+     *    int rename(char * oldname, char * newname);
+     *    修改文件名成功则返回0，否则返回-1
+     */
     if (rename(tmpfile,filename) == -1) {
         char *cwdp = getcwd(cwd,MAXPATHLEN);
         serverLog(LL_WARNING,
@@ -1265,9 +1291,11 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
         unlink(tmpfile);
         return C_ERR;
     }
-
+    // 写入日志，保存成功
     serverLog(LL_NOTICE,"DB saved on disk");
+    // 重置 dirty 计数器
     server.dirty = 0;
+    // 记录同步的时间
     server.lastsave = time(NULL);
     server.lastbgsave_status = C_OK;
     return C_OK;
