@@ -33,8 +33,18 @@
 #ifndef __PQSORT_H
 #define __PQSORT_H
 
+/**
+ * 快速排序算法
+ *
+ * @param a         待排序数组的首地址
+ * @param n         待排序元素的个数
+ * @param es        每个元素的字节大小
+ * @param cmp       比较器，回调函数，定义了比较的规则，直接影响排序结果是递增排序或递减排序，并支持非标准类型的排序
+ * @param lrange    待排序的左边界，表示的是下标值
+ * @param rrange    待排序的右边界，表示的是下标值
+ */
 void
 pqsort(void *a, size_t n, size_t es,
-    int (*cmp) (const void *, const void *), size_t lrange, size_t rrange);
+       int (*cmp) (const void *, const void *), size_t lrange, size_t rrange);
 
 #endif
