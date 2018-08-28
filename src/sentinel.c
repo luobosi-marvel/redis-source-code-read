@@ -2000,8 +2000,15 @@ void sentinelReconnectInstance(sentinelRedisInstance *ri) {
 /* Return true if master looks "sane", that is:
  * 1) It is actually a master in the current configuration.
  * 2) It reports itself as a master.
- * 3) It is not SDOWN or ODOWN.
- * 4) We obtained last INFO no more than two times the INFO period time ago. */
+ * 3) todo: It is not SDOWN(主观下线) or ODOWN(客观下线).
+ * 4) We obtained last INFO no more than two times the INFO period time ago.
+ *
+ * SDOWN：主观下线是指单个 Sentinel 实例对服务器做出的下线判断
+ * ODOWN：指的是多个 Sentinel 实例在对同一个服务器做出 SDOWN 判断，并且通过 SENTINEL is-master-down-by-addr 命令互相交流之后，
+ * 得出的服务器下线判断。
+ *
+ * （一个 Sentinel 可以通过向另一个 Sentinel 发送 SENTINEL is-master-down-by-addr 命令来询问对方是否认为给定的服务器已下线）
+ */
 int sentinelMasterLooksSane(sentinelRedisInstance *master) {
     return
         master->flags & SRI_MASTER &&
@@ -2662,7 +2669,7 @@ const char *sentinelFailoverStateStr(int state) {
     }
 }
 
-/* Redis instance to Redis protocol representation. */
+/* Redis instance to Redis protocol representation. Redis 实例用 Redis 协议表示 */
 void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri) {
     char *flags = sdsempty();
     void *mbl;
@@ -2852,8 +2859,10 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri) {
     setDeferredMultiBulkLength(c,mbl,fields*2);
 }
 
-/* Output a number of instances contained inside a dictionary as
- * Redis protocol. */
+/*
+ * Output a number of instances contained inside a dictionary as
+ * Redis protocol.
+ */
 void addReplyDictOfRedisInstances(client *c, dict *instances) {
     dictIterator *di;
     dictEntry *de;
@@ -2868,9 +2877,11 @@ void addReplyDictOfRedisInstances(client *c, dict *instances) {
     dictReleaseIterator(di);
 }
 
-/* Lookup the named master into sentinel.masters.
+/*
+ * Lookup the named master into sentinel.masters.
  * If the master is not found reply to the client with an error and returns
- * NULL. */
+ * NULL.
+ */
 sentinelRedisInstance *sentinelGetMasterByNameOrReplyError(client *c,
                         robj *name)
 {

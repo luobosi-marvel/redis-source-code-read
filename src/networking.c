@@ -67,8 +67,12 @@ int listMatchObjects(void *a, void *b) {
     return equalStringObjects(a,b);
 }
 
-/* This function links the client to the global linked list of clients.
- * unlinkClient() does the opposite, among other things. */
+/*
+ * This function links the client to the global linked list of clients.
+ * unlinkClient() does the opposite, among other things.
+ *
+ * 所有的客户端是通过 list 来维护的
+ */
 void linkClient(client *c) {
     listAddNodeTail(server.clients,c);
     /* Note that we remember the linked list node where the client is stored,
@@ -77,7 +81,14 @@ void linkClient(client *c) {
     c->client_list_node = listLast(server.clients);
 }
 
+/**
+ * 创建一个 client
+ *
+ * @param fd
+ * @return
+ */
 client *createClient(int fd) {
+    // 给 client 结构体分配内存
     client *c = zmalloc(sizeof(client));
 
     /*
@@ -85,24 +96,30 @@ client *createClient(int fd) {
      * This is useful since all the commands needs to be executed
      * in the context of a client. When commands are executed in other
      * contexts (for instance a Lua script) we need a non connected client.
+     *
+     * 传递 -1 作为 fd 可以创建一个非连接的客户端。这很有用，因为需要执行所有命令
+     * 在客户的背景下。在其他命令执行时上下文(例如 Lua 脚本)我们需要一个非连接的客户端。
      */
     if (fd != -1) {
-        anetNonBlock(NULL,fd);
-        anetEnableTcpNoDelay(NULL,fd);
+        anetNonBlock(NULL, fd);
+        anetEnableTcpNoDelay(NULL, fd);
         if (server.tcpkeepalive)
-            anetKeepAlive(NULL,fd,server.tcpkeepalive);
-        if (aeCreateFileEvent(server.el,fd,AE_READABLE,
-            readQueryFromClient, c) == AE_ERR)
-        {
+            anetKeepAlive(NULL, fd, server.tcpkeepalive);
+        if (aeCreateFileEvent(server.el, fd, AE_READABLE,
+                              readQueryFromClient, c) == AE_ERR) {
             close(fd);
             zfree(c);
             return NULL;
         }
     }
 
+    // 直接就选择 0 号库
     selectDb(c,0);
     uint64_t client_id;
-    atomicGetIncr(server.next_client_id,client_id,1);
+    // 将 client_id 自增
+    atomicGetIncr(server.next_client_id, client_id, 1);
+
+    // 给 client 赋值
     c->id = client_id;
     c->fd = fd;
     c->name = NULL;
@@ -132,8 +149,8 @@ client *createClient(int fd) {
     c->reply = listCreate();
     c->reply_bytes = 0;
     c->obuf_soft_limit_reached_time = 0;
-    listSetFreeMethod(c->reply,freeClientReplyValue);
-    listSetDupMethod(c->reply,dupClientReplyValue);
+    listSetFreeMethod(c->reply, freeClientReplyValue);
+    listSetDupMethod(c->reply, dupClientReplyValue);
     c->btype = BLOCKED_NONE;
     c->bpop.timeout = 0;
     c->bpop.keys = dictCreate(&objectKeyHeapPointerValueDictType,NULL);
@@ -143,13 +160,16 @@ client *createClient(int fd) {
     c->bpop.numreplicas = 0;
     c->bpop.reploffset = 0;
     c->woff = 0;
+    // 监控的 key，这里是一个 list
     c->watched_keys = listCreate();
+    // 监控的频道，是一个字典
     c->pubsub_channels = dictCreate(&objectKeyPointerValueDictType,NULL);
+    // 监听的模式，是一个 list
     c->pubsub_patterns = listCreate();
     c->peerid = NULL;
     c->client_list_node = NULL;
-    listSetFreeMethod(c->pubsub_patterns,decrRefCountVoid);
-    listSetMatchMethod(c->pubsub_patterns,listMatchObjects);
+    listSetFreeMethod(c->pubsub_patterns, decrRefCountVoid);
+    listSetMatchMethod(c->pubsub_patterns, listMatchObjects);
     if (fd != -1) linkClient(c);
     initClientMultiState(c);
     return c;
@@ -304,14 +324,16 @@ void addReplySds(client *c, sds s) {
     sdsfree(s);
 }
 
-/* This low level function just adds whatever protocol you send it to the
+/*
+ * This low level function just adds whatever protocol you send it to the
  * client buffer, trying the static buffer initially, and using the string
  * of objects if not possible.
  *
  * It is efficient because does not create an SDS object nor an Redis object
  * if not needed. The object will only be created by calling
  * _addReplyStringToList() if we fail to extend the existing tail object
- * in the list of objects. */
+ * in the list of objects.
+ */
 void addReplyString(client *c, const char *s, size_t len) {
     if (prepareClientToWrite(c) != C_OK) return;
     if (_addReplyToBuffer(c,s,len) != C_OK)
@@ -514,7 +536,10 @@ void addReplyBulk(client *c, robj *obj) {
     addReply(c,shared.crlf);
 }
 
-/* Add a C buffer as bulk reply */
+/*
+ * Add a C buffer as bulk reply
+ * 添加一个字符串给 缓冲区作为批量回复
+ */
 void addReplyBulkCBuffer(client *c, const void *p, size_t len) {
     addReplyLongLongWithPrefix(c,len,'$');
     addReplyString(c,p,len);
@@ -528,7 +553,9 @@ void addReplyBulkSds(client *c, sds s)  {
     addReply(c,shared.crlf);
 }
 
-/* Add a C null term string as bulk reply */
+/* Add a C null term string as bulk reply
+ * 添加 C null 术语字符串作为批量回复
+ */
 void addReplyBulkCString(client *c, const char *s) {
     if (s == NULL) {
         addReply(c,shared.nullbulk);
