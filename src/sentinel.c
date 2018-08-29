@@ -161,12 +161,16 @@ typedef struct instanceLink {
                                    the link was down. */
 } instanceLink;
 
+/**
+ * 表示一个被 Sentinel 监视的 Redis 服务器实例，这个实例可以使主服务器、从服务器，或者另一个 Sentinel
+ */
 typedef struct sentinelRedisInstance {
     // 标识值，纪录了实例的类型，以及该实例的当前状态
     int flags;      /* See SRI_... defines */
     // 实例的名字
     // 主服务器的名字由用户在配置文件中配置
     // 从服务器以及 Sentinel 的名字由 Sentinel 自动设置
+    // 格式为 ip:port, 例如 "127.0.0.1:26379"
     char *name;     /* Master name from the point of view of this sentinel. */
     // 实例的运行ID
     char *runid;    /* Run ID of this instance, or unique ID if is a Sentinel.*/
@@ -181,8 +185,10 @@ typedef struct sentinelRedisInstance {
                                  via Pub/Sub. */
     mstime_t last_master_down_reply_time; /* Time of last reply to
                                              SENTINEL is-master-down command. */
+    //
     mstime_t s_down_since_time; /* Subjectively down since time. */
     mstime_t o_down_since_time; /* Objectively down since time. */
+    // 实例无响应多少毫秒之后才会被判断为主观下线
     mstime_t down_after_period; /* Consider it down after that period. */
     mstime_t info_refresh;  /* Time at which we received INFO output from it. */
 
@@ -206,12 +212,15 @@ typedef struct sentinelRedisInstance {
 
     /* Slave specific. */
     mstime_t master_link_down_time; /* Slave replication link down time. */
+    // 通过 info 命令获取从服务器的优先级
     int slave_priority; /* Slave priority according to its INFO output. */
     mstime_t slave_reconf_sent_time; /* Time at which we sent SLAVE OF <new> */
     struct sentinelRedisInstance *master; /* Master instance if it's slave. */
     char *slave_master_host;    /* Master host as reported by INFO */
     int slave_master_port;      /* Master port as reported by INFO */
+    // 通过 info 命令获取主从服务器的连接状态
     int slave_master_link_status; /* Master link status as reported by INFO */
+    // 从服务器的复制偏移量
     unsigned long long slave_repl_offset; /* Slave replication offset. */
     /* Failover */
     char *leader;       /* If this is a master instance, this is the runid of
@@ -235,17 +244,32 @@ typedef struct sentinelRedisInstance {
     sds info; /* cached INFO output */
 } sentinelRedisInstance;
 
-/* Main state. */
+/*
+ * Main state. Sentinel 状态
+ * 这个结构保存了服务器中所有和 Sentinel 功能相关的转态
+ * (服务器的一般状态仍然由 redis.h/redisServer 结构保存)
+ *
+ */
 struct sentinelState {
+    // sentinel id
     char myid[CONFIG_RUN_ID_SIZE+1]; /* This sentinel ID. */
+    // 当前纪元，用于实现故障转移
     uint64_t current_epoch;         /* Current epoch. */
+    // 保存了所有被这个 sentinel 监视的主服务器
+    // 字典的键是主服务器的名字
+    // 字典的值则是一个指向 sentinelRedisInstance 结构的执政
     dict *masters;      /* Dictionary of master sentinelRedisInstances.
                            Key is the instance name, value is the
                            sentinelRedisInstance structure pointer. */
+    // 是否进入 TILT 模式
     int tilt;           /* Are we in TILT mode? */
+    // 目前正在执行的脚本的数量
     int running_scripts;    /* Number of scripts in execution right now. */
+    // 进入 TILT 模式的时间
     mstime_t tilt_start_time;       /* When TITL started. */
+    // 最后一次执行时间处理器的时间
     mstime_t previous_time;         /* Last time we ran the time handler. */
+    // 一个先进先出队列，包含了所有需要执行的用户脚本
     list *scripts_queue;            /* Queue of user scripts to execute. */
     char *announce_ip;  /* IP addr that is gossiped to other sentinels if
                            not NULL. */
@@ -256,7 +280,7 @@ struct sentinelState {
                                   paths at runtime? */
 } sentinel;
 
-/* A script execution job. */
+/* A script execution job. 一个脚本执行任务 */
 typedef struct sentinelScriptJob {
     int flags;              /* Script job flags: SENTINEL_SCRIPT_* */
     int retry_num;          /* Number of times we tried to execute it. */
@@ -435,6 +459,10 @@ void sentinelSetCommand(client *c);
 void sentinelPublishCommand(client *c);
 void sentinelRoleCommand(client *c);
 
+/**
+ * 这里维护了 Sentinel 用户可以输入的所有命令
+ * 除了这些命令之外其他命令都不能使用
+ */
 struct redisCommand sentinelcmds[] = {
     {"ping",pingCommand,1,"",0,NULL,0,0,0,0,0},
     {"sentinel",sentinelCommand,-2,"",0,NULL,0,0,0,0,0},
