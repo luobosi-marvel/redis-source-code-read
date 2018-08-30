@@ -48,7 +48,11 @@ size_t streamReplyWithRangeFromConsumerPEL(client *c, stream *s, streamID *start
  * Low level stream encoding: a radix tree of listpacks.
  * ----------------------------------------------------------------------- */
 
-/* Create a new stream data structure. */
+/*
+ * Create a new stream data structure.
+ *
+ * 创建一个新的 stream 结构体
+ */
 stream *streamNew(void) {
     stream *s = zmalloc(sizeof(*s));
     s->rax = raxNew();
