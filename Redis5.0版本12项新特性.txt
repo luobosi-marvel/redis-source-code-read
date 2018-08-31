@@ -1,0 +1,12 @@
+1. 新的 Stream 数据类型
+2. 新的 Redis 模块 API：Timers and Cluster API
+3. RDB 现在存储 LFU 和 LRU 信息
+4. 集群管理器从Ruby（redis-trib.rb）移植到C代码。可以在redis-cli中。查看`redis-cli —cluster help`了解更多信息
+5. 新 sorted set 命令：ZPOPMIN/MAX 和阻塞变量
+6. 主动碎片整理 V2
+7. 增强 HyperLogLog 实现
+8. 更好的内存统计报告
+9. 许多带有子命令的命令现在都一个 HELP 子命令
+10. 客户经常连接和断开时性能更好
+11. 错误修复和改进
+12. Jemalloc 升级到 5.1 版本
