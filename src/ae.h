@@ -138,12 +138,38 @@ typedef struct aeEventLoop {
 } aeEventLoop;
 
 /* Prototypes */
+/**
+ * 创建一个事件
+ * @param setsize
+ * @return
+ */
 aeEventLoop *aeCreateEventLoop(int setsize);
+/**
+ * 删除一个事件
+ * @param eventLoop
+ */
 void aeDeleteEventLoop(aeEventLoop *eventLoop);
+/**
+ * 停止一个事件
+ * @param eventLoop
+ */
 void aeStop(aeEventLoop *eventLoop);
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData);
+/**
+ * 删除一个文件事件
+ *
+ * @param eventLoop
+ * @param fd
+ * @param mask
+ */
 void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask);
+/**
+ * 获取一个文件事件
+ * @param eventLoop
+ * @param fd
+ * @return
+ */
 int aeGetFileEvents(aeEventLoop *eventLoop, int fd);
 long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,

@@ -122,6 +122,11 @@ int aeResizeSetSize(aeEventLoop *eventLoop, int setsize) {
     return AE_OK;
 }
 
+/**
+ * 释放一个事件
+ *
+ * @param eventLoop
+ */
 void aeDeleteEventLoop(aeEventLoop *eventLoop) {
     aeApiFree(eventLoop);
     zfree(eventLoop->events);
@@ -129,10 +134,23 @@ void aeDeleteEventLoop(aeEventLoop *eventLoop) {
     zfree(eventLoop);
 }
 
+/**
+ * 停止一个事件
+ *
+ * @param eventLoop
+ */
 void aeStop(aeEventLoop *eventLoop) {
     eventLoop->stop = 1;
 }
-
+/**
+ * 创建一个文件事件
+ * @param eventLoop
+ * @param fd
+ * @param mask
+ * @param proc
+ * @param clientData
+ * @return
+ */
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData)
 {
@@ -152,7 +170,12 @@ int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         eventLoop->maxfd = fd;
     return AE_OK;
 }
-
+/**
+ * 删除一个文件事件
+ * @param eventLoop
+ * @param fd
+ * @param mask
+ */
 void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)
 {
     if (fd >= eventLoop->setsize) return;
