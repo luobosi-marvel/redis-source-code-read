@@ -44,8 +44,14 @@
 #include "zmalloc.h"
 #include "config.h"
 
-/* Include the best multiplexing layer supported by this system.
- * The following should be ordered by performances, descending. */
+/*
+ * Include the best multiplexing layer supported by this system.
+ * The following should be ordered by performances, descending.
+ *
+ * ae.c中可以知道目前复用io的方式有下面四种
+ *
+ * 复用 IO 的四种方式分别是 evport -> epoll -> kqueue -> select .其执行的效率也是从高到底
+ */
 #ifdef HAVE_EVPORT
 #include "ae_evport.c"
 #else
