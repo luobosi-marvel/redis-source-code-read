@@ -32,6 +32,10 @@
 #include <sys/select.h>
 #include <string.h>
 
+/**
+ * Redis select io 复用事件模型
+ */
+
 typedef struct aeApiState {
     fd_set rfds, wfds;
     /* We need to have a copy of the fd sets as it's not safe to reuse
