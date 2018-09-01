@@ -33,6 +33,10 @@
 #include <sys/event.h>
 #include <sys/time.h>
 
+/**
+ * kqueue io 复用事件模型
+ */
+
 typedef struct aeApiState {
     int kqfd;
     struct kevent *events;
