@@ -31,6 +31,10 @@
 
 #include <sys/epoll.h>
 
+/**
+ * Redis epoll io 复用事件模型
+ */
+
 typedef struct aeApiState {
     int epfd;
     struct epoll_event *events;
