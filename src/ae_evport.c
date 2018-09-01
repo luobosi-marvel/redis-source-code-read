@@ -65,6 +65,11 @@ static int evport_debug = 0;
  */
 #define MAX_EVENT_BATCHSZ 512
 
+/**
+ * evport io 复用模型
+ */
+
+
 typedef struct aeApiState {
     int     portfd;                             /* event port */
     int     npending;                           /* # of pending fds */
@@ -74,6 +79,7 @@ typedef struct aeApiState {
 
 static int aeApiCreate(aeEventLoop *eventLoop) {
     int i;
+    // 申请一个结构体
     aeApiState *state = zmalloc(sizeof(aeApiState));
     if (!state) return -1;
 
