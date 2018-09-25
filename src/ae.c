@@ -247,6 +247,7 @@ long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,
         aeEventFinalizerProc *finalizerProc)
 {
+    // 时间事件 id
     long long id = eventLoop->timeEventNextId++;
     aeTimeEvent *te;
 
@@ -258,6 +259,7 @@ long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
     te->finalizerProc = finalizerProc;
     te->clientData = clientData;
     te->prev = NULL;
+    // 将新的时间事件放在链表头部？
     te->next = eventLoop->timeEventHead;
     if (te->next)
         te->next->prev = te;

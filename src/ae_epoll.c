@@ -32,7 +32,7 @@
 #include <sys/epoll.h>
 
 /**
- * Redis epoll io 复用事件模型
+ * Redis epoll io 是 Linux 系统内核提供支持的复用事件模型
  */
 
 typedef struct aeApiState {

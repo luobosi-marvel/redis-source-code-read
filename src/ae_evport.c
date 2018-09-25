@@ -66,7 +66,7 @@ static int evport_debug = 0;
 #define MAX_EVENT_BATCHSZ 512
 
 /**
- * evport io 复用事件模型
+ * evport io 是 Solaris 内核提供支持的复用事件模型
  */
 
 

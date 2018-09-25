@@ -33,7 +33,7 @@
 #include <string.h>
 
 /**
- * Redis select io 复用事件模型
+ * Redis select io 是 POSIX提供的，一般操作系统都有支撑的复用事件模型
  */
 
 typedef struct aeApiState {

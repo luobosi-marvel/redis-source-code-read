@@ -34,7 +34,7 @@
 #include <sys/time.h>
 
 /**
- * kqueue io 复用事件模型
+ * kqueue io 是 mac 系统提供的复用事件模型
  */
 
 typedef struct aeApiState {

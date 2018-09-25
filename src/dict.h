@@ -161,6 +161,7 @@ typedef void (dictScanBucketFunction)(void *privdata, dictEntry **bucketref);
 // 获取 key 值
 #define dictGetKey(he) ((he)->key)
 #define dictGetVal(he) ((he)->v.val)
+    
 #define dictGetSignedIntegerVal(he) ((he)->v.s64)
 #define dictGetUnsignedIntegerVal(he) ((he)->v.u64)
 #define dictGetDoubleVal(he) ((he)->v.d)

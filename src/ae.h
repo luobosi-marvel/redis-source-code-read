@@ -154,6 +154,9 @@ void aeDeleteEventLoop(aeEventLoop *eventLoop);
  * @param eventLoop
  */
 void aeStop(aeEventLoop *eventLoop);
+/**
+ * 创建一个文件事件
+ */
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData);
 /**
@@ -171,10 +174,16 @@ void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask);
  * @return
  */
 int aeGetFileEvents(aeEventLoop *eventLoop, int fd);
+/**
+ * 创建一个时间事件
+ */
 long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,
         aeEventFinalizerProc *finalizerProc);
 int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id);
+/**
+ * 执行一个事件
+ */
 int aeProcessEvents(aeEventLoop *eventLoop, int flags);
 int aeWait(int fd, int mask, long long milliseconds);
 /** aeMain是AE的启动函数，也是AE的事件循环,主程序的循环也起始于这个函数：*/

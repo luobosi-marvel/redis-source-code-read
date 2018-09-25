@@ -910,6 +910,7 @@ void databasesCron(void) {
     /*
      * Expire keys by random sampling. Not required for slaves
      * as master will synthesize DELs for us.
+     * 通过随机抽样使 key 过期。slaves 不需要，直接使用 master 合成 del 发送
      */
     if (server.active_expire_enabled && server.masterhost == NULL) {
         activeExpireCycle(ACTIVE_EXPIRE_CYCLE_SLOW);

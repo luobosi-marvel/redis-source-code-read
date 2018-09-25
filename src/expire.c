@@ -38,6 +38,10 @@
  * When keys are accessed they are expired on-access. However we need a
  * mechanism in order to ensure keys are eventually removed when expired even
  * if no access is performed on them.
+ * 
+ * 过期 key 的增量收集
+ * 访问 key 时，它们在访问时过期。如果不对它们进行访问，我们需要一个机制，以确保 key 最终
+ * 在过期时被删除
  *----------------------------------------------------------------------------*/
 
 /* Helper function for the activeExpireCycle() function.
@@ -59,9 +63,12 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, long long now) {
 
         propagateExpire(db,keyobj,server.lazyfree_lazy_expire);
         if (server.lazyfree_lazy_expire)
+            // 异步删除
             dbAsyncDelete(db,keyobj);
         else
+            // 同步删除
             dbSyncDelete(db,keyobj);
+        // 发送一个键过期的通知
         notifyKeyspaceEvent(NOTIFY_EXPIRED,
             "expired",keyobj,db->id);
         decrRefCount(keyobj);
@@ -129,10 +136,16 @@ void activeExpireCycle(int type) {
     if (dbs_per_call > server.dbnum || timelimit_exit)
         dbs_per_call = server.dbnum;
 
-    /* We can use at max ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC percentage of CPU time
+    /* 
+     * We can use at max ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC percentage of CPU time
      * per iteration. Since this function gets called with a frequency of
      * server.hz times per second, the following is the max amount of
-     * microseconds we can spend in this function. */
+     * microseconds we can spend in this function. 
+     *
+     * 最多允许 25% 的 CPU 时间用于过期 key 清理
+     * 若 hz = 1，则一次 activeExpireCycle 最多只能执行 250ms
+     * 若 hz = 10，则一次 activeExpireCycle 最多只能执行 25ms
+     */
     timelimit = 1000000*ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC/server.hz/100;
     timelimit_exit = 0;
     if (timelimit <= 0) timelimit = 1;
@@ -158,6 +171,7 @@ void activeExpireCycle(int type) {
         /* Continue to expire if at the end of the cycle more than 25%
          * of the keys were expired. */
         do {
+            // num 表示过期字典中元素的个数
             unsigned long num, slots;
             long long now, ttl_sum;
             int ttl_samples;
@@ -169,6 +183,7 @@ void activeExpireCycle(int type) {
                 break;
             }
             slots = dictSlots(db->expires);
+            // 获取当前时间戳
             now = mstime();
 
             /* When there are less than 1% filled slots getting random
@@ -182,17 +197,19 @@ void activeExpireCycle(int type) {
             expired = 0;
             ttl_sum = 0;
             ttl_samples = 0;
-
+            // todo：一次取 20 个 key ，判断是否过期
             if (num > ACTIVE_EXPIRE_CYCLE_LOOKUPS_PER_LOOP)
                 num = ACTIVE_EXPIRE_CYCLE_LOOKUPS_PER_LOOP;
-
+            // 遍历
             while (num--) {
                 dictEntry *de;
                 long long ttl;
-
+                // 随机取出一个键
                 if ((de = dictGetRandomKey(db->expires)) == NULL) break;
+                // 计算过期时间和当前时间的差值
                 ttl = dictGetSignedIntegerVal(de)-now;
                 if (activeExpireCycleTryExpire(db,de,now)) expired++;
+                // 如果 ttl 大于 0 说明还没有过期
                 if (ttl > 0) {
                     /* We want the average TTL of keys yet not expired. */
                     ttl_sum += ttl;
@@ -224,8 +241,11 @@ void activeExpireCycle(int type) {
                     break;
                 }
             }
-            /* We don't repeat the cycle if there are less than 25% of keys
-             * found expired in the current DB. */
+            /* 
+             * We don't repeat the cycle if there are less than 25% of keys
+             * found expired in the current DB. 
+             * 若有 5 个以上过期 key，则继续直至超时时间超过 25% 的 CPU 时间，若没有 5 个过期 key，则跳过
+             */
         } while (expired > ACTIVE_EXPIRE_CYCLE_LOOKUPS_PER_LOOP/4);
     }
 

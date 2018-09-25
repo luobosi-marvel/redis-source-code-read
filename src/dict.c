@@ -700,18 +700,25 @@ dictEntry *dictGetRandomKey(dict *d) {
     }
 
 
-    /* Now we found a non empty bucket, but it is a linked
+    /* 
+     * Now we found a non empty bucket, but it is a linked
      * list and we need to get a random element from the list.
      * The only sane way to do so is counting the elements and
-     * select a random index. */
-    listlen = 0;
+     * select a random index. 
+     * 现在我们发现了一个非空桶，但它是一个链表 list，我们需要同列表中获取一个随机元素。
+     * 唯一明智的方法就是计算元素和数量选择一个随机索引
+     */
+    listlen = 0;// 链表长度
+    // 已 he 作为起始值
     orighe = he;
     while (he) {
         he = he->next;
         listlen++;
     }
+    // 获取一个随机数，然后%长度，就可以得到一个随机的索引
     listele = random() % listlen;
     he = orighe;
+    // 这里其实就是根据计算出 he 的偏移量的元素
     while (listele--) he = he->next;
     return he;
 }
