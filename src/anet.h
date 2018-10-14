@@ -48,23 +48,23 @@
 #ifdef _AIX
 #undef ip_len
 #endif
-
+/* TCP的默认连接 */
 int anetTcpConnect(char *err, char *addr, int port);
-
+/* TCP的非阻塞连接 */
 int anetTcpNonBlockConnect(char *err, char *addr, int port);
 
 int anetTcpNonBlockBindConnect(char *err, char *addr, int port, char *source_addr);
 
 int anetTcpNonBlockBestEffortBindConnect(char *err, char *addr, int port, char *source_addr);
-
+/* anet的Unix方式的默认连接方式 */
 int anetUnixConnect(char *err, char *path);
-
+/* anet的Unix方式的非阻塞连接方式 */
 int anetUnixNonBlockConnect(char *err, char *path);
-
+/* anet网络读取文件到buffer中操作 */
 int anetRead(int fd, char *buf, int count);
-
+/* 解析所有的东西 */
 int anetResolve(char *err, char *host, char *ipbuf, size_t ipbuf_len);
-
+/* 单单解析IP的地址 */
 int anetResolveIP(char *err, char *host, char *ipbuf, size_t ipbuf_len);
 
 int anetTcpServer(char *err, int port, char *bindaddr, int backlog);
@@ -76,23 +76,23 @@ int anetUnixServer(char *err, char *path, mode_t perm, int backlog);
 int anetTcpAccept(char *err, int serversock, char *ip, size_t ip_len, int *port);
 
 int anetUnixAccept(char *err, int serversock);
-
+/* anet通过网络从buffer中写入文件操作 */
 int anetWrite(int fd, char *buf, int count);
-
+/* anet设置非阻塞的方法 */
 int anetNonBlock(char *err, int fd);
 
 int anetBlock(char *err, int fd);
-
+/* 启用TCP没有延迟 */
 int anetEnableTcpNoDelay(char *err, int fd);
-
+/* 禁用TCP连接没有延迟 */
 int anetDisableTcpNoDelay(char *err, int fd);
-
+/* 设置TCP保持活跃连接状态。适用于所有系统 */
 int anetTcpKeepAlive(char *err, int fd);
 
 int anetSendTimeout(char *err, int fd, long long ms);
 
 int anetPeerToString(int fd, char *ip, size_t ip_len, int *port);
-
+/* 设置TCP连接一直存活，用来检测已经死去的结点，interval选项只适用于Linux下的系统 */
 int anetKeepAlive(char *err, int fd, int interval);
 
 int anetSockName(int fd, char *ip, size_t ip_len, int *port);

@@ -189,7 +189,10 @@ int anetSendTimeout(char *err, int fd, long long ms) {
  *
  * If flags is set to ANET_IP_ONLY the function only resolves hostnames
  * that are actually already IPv4 or IPv6 addresses. This turns the function
- * into a validating / normalizing function. */
+ * into a validating / normalizing function.
+ *
+ * 解析的泛型方法，可以根据条件解析host主机名或IP地址
+ */
 int anetGenericResolve(char *err, char *host, char *ipbuf, size_t ipbuf_len,
                        int flags) {
     struct addrinfo hints, *info;
@@ -204,6 +207,7 @@ int anetGenericResolve(char *err, char *host, char *ipbuf, size_t ipbuf_len,
         anetSetError(err, "%s", gai_strerror(rv));
         return ANET_ERR;
     }
+    //根据类型解析ipV4的地址还是ipV6的地址
     if (info->ai_family == AF_INET) {
         struct sockaddr_in *sa = (struct sockaddr_in *) info->ai_addr;
         inet_ntop(AF_INET, &(sa->sin_addr), ipbuf, ipbuf_len);
@@ -503,9 +507,11 @@ int anetUnixServer(char *err, char *path, mode_t perm, int backlog) {
     return s;
 }
 
+/* socket连接操作 */
 static int anetGenericAccept(char *err, int s, struct sockaddr *sa, socklen_t *len) {
     int fd;
     while (1) {
+        //通过while循环等待连接
         fd = accept(s, sa, len);
         if (fd == -1) {
             if (errno == EINTR)
