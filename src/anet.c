@@ -258,10 +258,20 @@ static int anetCreateSocket(char *err, int domain) {
 #define ANET_CONNECT_NONE 0
 #define ANET_CONNECT_NONBLOCK 1
 #define ANET_CONNECT_BE_BINDING 2 /* Best effort binding. */
-
+/**
+ * 建立 tcp 请求连接
+ *
+ * @param err
+ * @param addr
+ * @param port
+ * @param source_addr
+ * @param flags
+ * @return
+ */
 static int anetTcpGenericConnect(char *err, char *addr, int port,
                                  char *source_addr, int flags) {
     int s = ANET_ERR, rv;
+    // 端口号字符串
     char portstr[6];  /* strlen("65535") + 1; */
     struct addrinfo hints, *servinfo, *bservinfo, *p, *b;
 
@@ -302,6 +312,7 @@ static int anetTcpGenericConnect(char *err, char *addr, int port,
                 goto error;
             }
         }
+        // 建立连接
         if (connect(s, p->ai_addr, p->ai_addrlen) == -1) {
             /* If the socket is non-blocking, it is ok for connect() to
              * return an EINPROGRESS error here. */
@@ -406,11 +417,16 @@ int anetRead(int fd, char *buf, int count) {
     return totlen;
 }
 
-/* Like write(2) but make sure 'count' is written before to return
- * (unless error is encountered) */
+/*
+ * Like write(2) but make sure 'count' is written before to return
+ * (unless error is encountered)
+ *
+ * 这里应该就是从网络中读取数据
+ */
 int anetWrite(int fd, char *buf, int count) {
     ssize_t nwritten, totlen = 0;
     while (totlen != count) {
+        // todo： 这里应该就和 io 复用模型有关了，接收到数据请求
         nwritten = write(fd, buf, count - totlen);
         if (nwritten == 0) return totlen;
         if (nwritten == -1) return -1;

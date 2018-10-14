@@ -737,7 +737,9 @@ typedef struct client {
 
     size_t querybuf_peak;   /* Recent (100ms or more) peak of querybuf size. */
     int argc;               /* Num of arguments of current command. */
+    // client 当前的命令参数
     robj **argv;            /* Arguments of current command. */
+    // 这里就是 redisCommand
     struct redisCommand *cmd, *lastcmd;  /* Last command executed. */
     int reqtype;            /* Request protocol type: PROTO_REQ_* */
     // 要读取的多个批量参数的数量
@@ -784,8 +786,9 @@ typedef struct client {
     sds peerid;             /* Cached peer ID. */
     listNode *client_list_node; /* list node in client list */
 
-    /* Response buffer */
+    /* Response buffer 响应的 buffer */
     int bufpos;
+    // 存储响应结果的缓冲数组
     char buf[PROTO_REPLY_CHUNK_BYTES];
 } client;
 

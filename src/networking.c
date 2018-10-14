@@ -105,6 +105,7 @@ client *createClient(int fd) {
         anetEnableTcpNoDelay(NULL, fd);
         if (server.tcpkeepalive)
             anetKeepAlive(NULL, fd, server.tcpkeepalive);
+        // 创建一个文件事件
         if (aeCreateFileEvent(server.el, fd, AE_READABLE,
                               readQueryFromClient, c) == AE_ERR) {
             close(fd);
@@ -175,7 +176,8 @@ client *createClient(int fd) {
     return c;
 }
 
-/* This function is called every time we are going to transmit new data
+/*
+ * This function is called every time we are going to transmit new data
  * to the client. The behavior is the following:
  *
  * If the client should receive new data (normal clients will) the function
@@ -196,7 +198,9 @@ client *createClient(int fd) {
  *
  * Typically gets called every time a reply is built, before adding more
  * data to the clients output buffers. If the function returns C_ERR no
- * data should be appended to the output buffers. */
+ * data should be appended to the output buffers.
+ *
+ */
 int prepareClientToWrite(client *c) {
     /* If it's the Lua client we always return ok without installing any
      * handler since there is no socket at all. */
@@ -237,6 +241,7 @@ int prepareClientToWrite(client *c) {
 
 /* -----------------------------------------------------------------------------
  * Low level functions to add more data to output buffers.
+ * 低级函数用于向输出缓冲区添加更多数据。
  * -------------------------------------------------------------------------- */
 
 int _addReplyToBuffer(client *c, const char *s, size_t len) {
@@ -294,7 +299,7 @@ void _addReplyStringToList(client *c, const char *s, size_t len) {
  */
 void addReply(client *c, robj *obj) {
     if (prepareClientToWrite(c) != C_OK) return;
-
+    // 设置返回数据的编码格式
     if (sdsEncodedObject(obj)) {
         if (_addReplyToBuffer(c,obj->ptr,sdslen(obj->ptr)) != C_OK)
             _addReplyStringToList(c,obj->ptr,sdslen(obj->ptr));
@@ -898,8 +903,13 @@ void freeClientsInAsyncFreeQueue(void) {
     }
 }
 
-/* Write data in output buffers to client. Return C_OK if the client
- * is still valid after the call, C_ERR if it was freed. */
+/*
+ * Write data in output buffers to client. Return C_OK if the client
+ * is still valid after the call, C_ERR if it was freed.
+ *
+ * todo： 将输出缓冲区中的数据写入客户端。
+ * 如果客户端返回C_OK 在调用后仍然有效，C_ERR如果被释放。
+ */
 int writeToClient(int fd, client *c, int handler_installed) {
     ssize_t nwritten = 0, totwritten = 0;
     size_t objlen;
@@ -991,17 +1001,25 @@ int writeToClient(int fd, client *c, int handler_installed) {
     return C_OK;
 }
 
-/* Write event handler. Just send data to the client. */
+/*
+ * Write event handler. Just send data to the client.
+ * 事件处理程序。 只需将数据发送给客户端即可。
+ */
 void sendReplyToClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     UNUSED(el);
     UNUSED(mask);
     writeToClient(fd,privdata,1);
 }
 
-/* This function is called just before entering the event loop, in the hope
+/*
+ * This function is called just before entering the event loop, in the hope
  * we can just write the replies to the client output buffer without any
  * need to use a syscall in order to install the writable event handler,
- * get it called, and so forth. */
+ * get it called, and so forth.
+ *
+ * 在进入事件循环之前调用此函数，希望如此我们可以在没有任何内容的情况下将回复写入客户端输出缓冲区
+ * 需要使用系统调用来安装可写事件处理程序，让它被召唤，等等。
+ */
 int handleClientsWithPendingWrites(void) {
     listIter li;
     listNode *ln;
@@ -1313,13 +1331,18 @@ int processMultibulkBuffer(client *c) {
     return C_ERR;
 }
 
-/* This function is called every time, in the client structure 'c', there is
+/*
+ * This function is called every time, in the client structure 'c', there is
  * more query buffer to process, because we read more data from the socket
  * or because a client was blocked and later reactivated, so there could be
- * pending query buffer, already representing a full command, to process. */
+ * pending query buffer, already representing a full command, to process.
+ *
+ * 每次调用此函数，在客户端结构“c”中都有更多的查询缓冲区要处理，因为我们从套接字读取更多数据
+ * 或因为客户端被阻止并稍后重新激活，所以可能会待处理的查询缓冲区，已经代表一个完整的命令。
+ */
 void processInputBuffer(client *c) {
     server.current_client = c;
-    /* Keep processing while there is something in the input buffer */
+    /* 在输入缓冲区中存在某些内容时继续处理，也就是持续处理输入缓冲区里面的数据 */
     while(sdslen(c->querybuf)) {
         /* Return if clients are paused. */
         if (!(c->flags & CLIENT_SLAVE) && clientsArePaused()) break;
@@ -1355,18 +1378,24 @@ void processInputBuffer(client *c) {
         if (c->argc == 0) {
             resetClient(c);
         } else {
-            /* Only reset the client when the command was executed. */
+            /*
+             * 仅在执行命令时重置客户端。
+             * todo: 这里就要处理我们的命令了
+             */
             if (processCommand(c) == C_OK) {
                 if (c->flags & CLIENT_MASTER && !(c->flags & CLIENT_MULTI)) {
                     /* Update the applied replication offset of our master. */
                     c->reploff = c->read_reploff - sdslen(c->querybuf);
                 }
 
-                /* Don't reset the client structure for clients blocked in a
+                /*
+                 * Don't reset the client structure for clients blocked in a
                  * module blocking command, so that the reply callback will
                  * still be able to access the client argv and argc field.
-                 * The client will be reset in unblockClientFromModule(). */
+                 * The client will be reset in unblockClientFromModule().
+                 */
                 if (!(c->flags & CLIENT_BLOCKED) || c->btype != BLOCKED_MODULE)
+                    // 重置我们的客户端
                     resetClient(c);
             }
             /* freeMemoryIfNeeded may flush slave output buffers. This may
@@ -1772,9 +1801,13 @@ void securityWarningCommand(client *c) {
     freeClientAsync(c);
 }
 
-/* Rewrite the command vector of the client. All the new objects ref count
+/*
+ * Rewrite the command vector of the client. All the new objects ref count
  * is incremented. The old command vector is freed, and the old objects
- * ref count is decremented. */
+ * ref count is decremented.
+ *
+ * 重写客户端的命令向量。 所有新对象都重新计算递增。 释放旧的命令向量，以及旧对象引用计数递减。
+ */
 void rewriteClientCommandVector(client *c, int argc, ...) {
     va_list ap;
     int j;
@@ -2042,7 +2075,8 @@ int clientsArePaused(void) {
     return server.clients_paused;
 }
 
-/* This function is called by Redis in order to process a few events from
+/*
+ * This function is called by Redis in order to process a few events from
  * time to time while blocked into some not interruptible operation.
  * This allows to reply to clients with the -LOADING error while loading the
  * data set at startup or after a full resynchronization with the master
@@ -2053,7 +2087,8 @@ int clientsArePaused(void) {
  * some event was processed, in order to go forward with the accept, read,
  * write, close sequence needed to serve a client.
  *
- * The function returns the total number of events processed. */
+ * The function returns the total number of events processed.
+ */
 int processEventsWhileBlocked(void) {
     int iterations = 4; /* See the function top-comment. */
     int count = 0;

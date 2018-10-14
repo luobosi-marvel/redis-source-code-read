@@ -560,7 +560,7 @@ static void cliIntegrateHelp(void) {
     freeReplyObject(reply);
 }
 
-/* Output command help to stdout. */
+/* 输出命令帮助stdout。 */
 static void cliOutputCommandHelp(struct commandHelp *help, int group) {
     printf("\r\n  \x1b[1m%s\x1b[0m \x1b[90m%s\x1b[0m\r\n", help->name, help->params);
     printf("  \x1b[33msummary:\x1b[0m %s\r\n", help->summary);
@@ -590,7 +590,7 @@ static void cliOutputGenericHelp(void) {
     sdsfree(version);
 }
 
-/* Output all command help, filtering by group or command name. */
+/* 输出所有命令帮助，按组或命令名称过滤。 */
 static void cliOutputHelp(int argc, char **argv) {
     int i, j, len;
     int group = -1;
