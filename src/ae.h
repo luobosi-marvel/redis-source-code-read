@@ -63,8 +63,11 @@ struct aeEventLoop;
 
 /* Types and data structures */
 typedef void aeFileProc(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
+
 typedef int aeTimeProc(struct aeEventLoop *eventLoop, long long id, void *clientData);
+
 typedef void aeEventFinalizerProc(struct aeEventLoop *eventLoop, void *clientData);
+
 typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 
 /* 文件事件结构体 */
@@ -144,21 +147,25 @@ typedef struct aeEventLoop {
  * @return
  */
 aeEventLoop *aeCreateEventLoop(int setsize);
+
 /**
  * 删除一个事件
  * @param eventLoop
  */
 void aeDeleteEventLoop(aeEventLoop *eventLoop);
+
 /**
  * 停止一个事件
  * @param eventLoop
  */
 void aeStop(aeEventLoop *eventLoop);
+
 /**
  * 创建一个文件事件
  */
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
-        aeFileProc *proc, void *clientData);
+                      aeFileProc *proc, void *clientData);
+
 /**
  * 删除一个文件事件
  *
@@ -167,6 +174,7 @@ int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
  * @param mask
  */
 void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask);
+
 /**
  * 获取一个文件事件
  * @param eventLoop
@@ -174,24 +182,34 @@ void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask);
  * @return
  */
 int aeGetFileEvents(aeEventLoop *eventLoop, int fd);
+
 /**
  * 创建一个时间事件
  */
 long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
-        aeTimeProc *proc, void *clientData,
-        aeEventFinalizerProc *finalizerProc);
+                            aeTimeProc *proc, void *clientData,
+                            aeEventFinalizerProc *finalizerProc);
+
 int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id);
+
 /**
  * 执行一个事件
  */
 int aeProcessEvents(aeEventLoop *eventLoop, int flags);
+
 int aeWait(int fd, int mask, long long milliseconds);
+
 /** aeMain是AE的启动函数，也是AE的事件循环,主程序的循环也起始于这个函数：*/
 void aeMain(aeEventLoop *eventLoop);
+
 char *aeGetApiName(void);
+
 void aeSetBeforeSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *beforesleep);
+
 void aeSetAfterSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *aftersleep);
+
 int aeGetSetSize(aeEventLoop *eventLoop);
+
 int aeResizeSetSize(aeEventLoop *eventLoop, int setsize);
 
 #endif
