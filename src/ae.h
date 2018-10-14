@@ -59,6 +59,14 @@
 /* Macros */
 #define AE_NOTUSED(V) ((void) V)
 
+/**
+ * todo： io 复用优势
+ *
+ * 与多进程和多线程技术相比，I/O多路复用技术的最大优势是系统开销小，
+ * 系统不必创建进程/线程，也不必维护这些进程/线程，从而大大减小了系统的开销。
+ */
+
+
 struct aeEventLoop;
 
 /* Types and data structures */
@@ -69,6 +77,12 @@ typedef int aeTimeProc(struct aeEventLoop *eventLoop, long long id, void *client
 typedef void aeEventFinalizerProc(struct aeEventLoop *eventLoop, void *clientData);
 
 typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
+/*
+ * fd：文件描述符
+ * linux下，所有的操作都是对文件进行操作，而对文件的操作是利用文件描述符(file descriptor)来实现的。
+ * 每个文件进程控制块中都有一份文件描述符表（可以把它看成是一个数组，里面的元素是指向file结构体指针类型），
+ * 这个数组的下标就是文件描述符。在源代码中，一般用fd作为文件描述符的标识。
+ */
 
 /* 文件事件结构体 */
 typedef struct aeFileEvent {

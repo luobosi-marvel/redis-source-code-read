@@ -34,6 +34,7 @@
 
 /**
  * Redis select io 是 POSIX提供的，一般操作系统都有支撑的复用事件模型
+ * 一般每个操作系统都会提供这种复用事件模型
  */
 
 typedef struct aeApiState {
