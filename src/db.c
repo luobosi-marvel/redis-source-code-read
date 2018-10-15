@@ -180,6 +180,7 @@ void dbAdd(redisDb *db, robj *key, robj *val) {
     if (val->type == OBJ_LIST ||
         val->type == OBJ_ZSET)
         signalKeyAsReady(db, key);
+    // 如果开启了集群，则往 slot 里面也要添加 key
     if (server.cluster_enabled) slotToKeyAdd(key);
 }
 
@@ -1077,7 +1078,10 @@ int removeExpire(redisDb *db, robj *key) {
  * Set an expire to the specified key. If the expire is set in the context
  * of an user calling a command 'c' is the client, otherwise 'c' is set
  * to NULL. The 'when' parameter is the absolute unix time in milliseconds
- * after which the key will no longer be considered valid. 
+ * after which the key will no longer be considered valid.
+ *
+ * 给指定 key 设置过期时间。 如果在上下文中设置了过期调用命令'c'的用户*是客户端，否则设置'c'
+ * 为NULL。 'when'参数是绝对unix时间，以毫秒为单位之后，该密钥将不再被视为有效。
  */
 void setExpire(client *c, redisDb *db, robj *key, long long when) {
     dictEntry *kde, *de;
@@ -1085,7 +1089,9 @@ void setExpire(client *c, redisDb *db, robj *key, long long when) {
     /* Reuse the sds from the main dict in the expire dict */
     kde = dictFind(db->dict,key->ptr);
     serverAssertWithInfo(NULL,key,kde != NULL);
+    // 将该 key 添加到过期 dict 字典当中去
     de = dictAddOrFind(db->expires,dictGetKey(kde));
+    // 设置 value 和 过期时间
     dictSetSignedIntegerVal(de,when);
 
     int writable_slave = server.masterhost && server.repl_slave_ro == 0;

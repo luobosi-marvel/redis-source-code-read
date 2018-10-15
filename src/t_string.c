@@ -80,6 +80,7 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
     // 判断过期时间
     long long milliseconds = 0; /* initialized to avoid any harmness warning */
     if (expire) {
+        // 验证我们传入的过期时间数
         if (getLongLongFromObjectOrReply(c, expire, &milliseconds, NULL) != C_OK)
             return;
         if (milliseconds <= 0) {
@@ -99,10 +100,13 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
     // todo: set 命令实际添加值的地方
     setKey(c->db,key,val);
     server.dirty++;
+    // 设置过期捡
     if (expire) setExpire(c,c->db,key,mstime()+milliseconds);
+    // 过期键空间通知
     notifyKeyspaceEvent(NOTIFY_STRING,"set",key,c->db->id);
     if (expire) notifyKeyspaceEvent(NOTIFY_GENERIC,
                                     "expire", key, c->db->id);
+    // 回复客户端成功与否
     addReply(c, ok_reply ? ok_reply : shared.ok);
 }
 

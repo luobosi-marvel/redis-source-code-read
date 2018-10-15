@@ -1034,15 +1034,25 @@ int handleClientsWithPendingWrites(void) {
         /* Try to write buffers to the client socket. */
         if (writeToClient(c->fd,c,0) == C_ERR) continue;
 
-        /* If after the synchronous writes above we still have data to
-         * output to the client, we need to install the writable handler. */
+        /*
+         * If after the synchronous writes above we still have data to
+         * output to the client, we need to install the writable handler.
+         *
+         * 如果在上面的同步写入后我们仍然有数据输出到客户端，我们需要安装可写处理程序。
+         */
         if (clientHasPendingReplies(c)) {
             int ae_flags = AE_WRITABLE;
-            /* For the fsync=always policy, we want that a given FD is never
+            /*
+             * For the fsync=always policy, we want that a given FD is never
              * served for reading and writing in the same event loop iteration,
              * so that in the middle of receiving the query, and serving it
              * to the client, we'll call beforeSleep() that will do the
-             * actual fsync of AOF to disk. AE_BARRIER ensures that. */
+             * actual fsync of AOF to disk. AE_BARRIER ensures that.
+             *
+             * 对于fsync = always策略，我们希望给定的FD永远不会用于在同一事件循环迭代中读取和写入，
+             * 以便在接收查询的过程中，并提供服务对于客户端，我们将调用beforeSleep（）来执行此操作
+             * AOF到磁盘的实际fsync。 AE_BARRIER确保了这一点。
+             */
             if (server.aof_state == AOF_ON &&
                 server.aof_fsync == AOF_FSYNC_ALWAYS)
             {
@@ -1137,9 +1147,14 @@ int processInlineBuffer(client *c) {
         c->argv = zmalloc(sizeof(robj*)*argc);
     }
 
-    /* Create redis objects for all arguments. */
+    /*
+     * Create redis objects for all arguments.
+     *
+     * todo: 为 client 中所有的参数都创建成一个 redis object 对象
+     */
     for (c->argc = 0, j = 0; j < argc; j++) {
         if (sdslen(argv[j])) {
+            // 创建一个 object 对象
             c->argv[c->argc] = createObject(OBJ_STRING,argv[j]);
             c->argc++;
         } else {
@@ -1367,6 +1382,7 @@ void processInputBuffer(client *c) {
         }
 
         if (c->reqtype == PROTO_REQ_INLINE) {
+            // todo: 该方法会把 client 里面的参数转换成 redis object 对象
             if (processInlineBuffer(c) != C_OK) break;
         } else if (c->reqtype == PROTO_REQ_MULTIBULK) {
             if (processMultibulkBuffer(c) != C_OK) break;
@@ -1845,7 +1861,8 @@ void replaceClientCommandVector(client *c, int argc, robj **argv) {
     serverAssertWithInfo(c,NULL,c->cmd != NULL);
 }
 
-/* Rewrite a single item in the command vector.
+/*
+ * Rewrite a single item in the command vector.
  * The new val ref count is incremented, and the old decremented.
  *
  * It is possible to specify an argument over the current size of the
@@ -1855,7 +1872,8 @@ void replaceClientCommandVector(client *c, int argc, robj **argv) {
  * 1. Make sure there are no "holes" and all the arguments are set.
  * 2. If the original argument vector was longer than the one we
  *    want to end with, it's up to the caller to set c->argc and
- *    free the no longer used objects on c->argv. */
+ *    free the no longer used objects on c->argv.
+ */
 void rewriteClientCommandArgument(client *c, int i, robj *newval) {
     robj *oldval;
 
@@ -2088,6 +2106,13 @@ int clientsArePaused(void) {
  * write, close sequence needed to serve a client.
  *
  * The function returns the total number of events processed.
+ *
+ *
+ * Redis调用此函数以处理来自的一些事件不时被阻止进入一些不可中断的操作。
+ * 这允许在加载时回复客户端出现-LOADING错误在启动时或与主设备完全重新同步后设置的数据等等。
+ *
+ * 它调用事件循环以处理一些事件。 特别是我们只要我们收到确认，尝试调用事件循环4次处理了一些事件，以便继续接受，阅读，
+ * 写，关闭服务客户端所需的序列。该函数返回已处理事件的总数。
  */
 int processEventsWhileBlocked(void) {
     int iterations = 4; /* See the function top-comment. */
@@ -2095,6 +2120,7 @@ int processEventsWhileBlocked(void) {
     while (iterations--) {
         int events = 0;
         events += aeProcessEvents(server.el, AE_FILE_EVENTS|AE_DONT_WAIT);
+        // 处理挂起的输出缓冲区
         events += handleClientsWithPendingWrites();
         if (!events) break;
         count += events;

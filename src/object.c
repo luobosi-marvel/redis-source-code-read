@@ -45,8 +45,12 @@ robj *createObject(int type, void *ptr) {
     o->ptr = ptr;
     o->refcount = 1;
 
-    /* Set the LRU to the current lruclock (minutes resolution), or
-     * alternatively the LFU counter. */
+    /*
+     * Set the LRU to the current lruclock (minutes resolution), or
+     * alternatively the LFU counter.
+     *
+     * 将LRU设置为当前lruclock（分钟分辨率），或或者LFU计数器。
+     */
     if (server.maxmemory_policy & MAXMEMORY_FLAG_LFU) {
         o->lru = (LFUGetTimeInMinutes()<<8) | LFU_INIT_VAL;
     } else {
