@@ -66,6 +66,7 @@ int setTypeAdd(robj *subject, sds value) {
         dict *ht = subject->ptr;
         dictEntry *de = dictAddRaw(ht,value,NULL);
         if (de) {
+            // 将 value 设置成 key
             dictSetKey(ht,de,sdsdup(value));
             dictSetVal(ht,de,NULL);
             return 1;
@@ -297,7 +298,7 @@ void saddCommand(client *c) {
         // 使用指定的名称创建一个 set 集合
         // todo: 这里是 set 底层结构创建的地方
         set = setTypeCreate(c->argv[2]->ptr);
-        // 往 db 中添加该集合
+        // 往 db 中 添加一个 key 是 set_name value 是根据 就是 value 构造出来的 redis object 对象
         dbAdd(c->db,c->argv[1],set);
     } else {
         // 如果不是 set 类型
