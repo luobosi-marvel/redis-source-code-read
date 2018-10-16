@@ -118,7 +118,7 @@ void flagTransaction(client *c) {
 }
 
 /**
- * 事务执行的命令
+ * 开启一个事务的命令
  */
 void multiCommand(client *c) {
     // 事务不支持嵌套
