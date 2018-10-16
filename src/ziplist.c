@@ -307,7 +307,7 @@ typedef struct zlentry {
                                     the entry encoding. However for 4 bits
                                     immediate integers this can assume a range
                                     of values and must be range-checked. */
-    // 这里就是用来存储 zlentry 的值得
+    // 这里就是用来存储 zlentry 的值
     unsigned char *p;            /* Pointer to the very start of the entry, that
                                     is, this points to prev-entry-len field. */
 } zlentry;

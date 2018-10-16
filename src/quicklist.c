@@ -433,7 +433,7 @@ REDIS_STATIC int _quicklistNodeAllowInsert(const quicklistNode *node,
         return 0;
 
     int ziplist_overhead;
-    /* size of previous offset */
+    /* size of previous offset 节点的大小是否小于 254 个字节 */
     if (sz < 254)
         ziplist_overhead = 1;
     else
@@ -500,6 +500,7 @@ int quicklistPushHead(quicklist *quicklist, void *value, size_t sz) {
      */
     if (likely(
             // 判断该头部节点是否允许插入，计算头部节点中的大小和fill参数设置的大小相比较
+            // 如果头节点 ziplist 已经满了，就需要重新创建一个 quicklistNode 节点保存新的 ziplist ，以此保存元素
             _quicklistNodeAllowInsert(quicklist->head, quicklist->fill, sz))) {
         quicklist->head->zl =
             // 往当前的 ziplist 压缩列表中添加数据
@@ -1431,16 +1432,18 @@ int quicklistPop(quicklist *quicklist, int where, unsigned char **data,
 /**
  * push 操作，需要判断是头部插入还是尾部插入
  *
- * @param quicklist
- * @param value
- * @param sz
- * @param where
+ * @param quicklist quicklist 结构
+ * @param value 要添加的值
+ * @param sz    value 的实际长度
+ * @param where 插入的位置
  */
 void quicklistPush(quicklist *quicklist, void *value, const size_t sz,
                    int where) {
     if (where == QUICKLIST_HEAD) {
+        // 头插法
         quicklistPushHead(quicklist, value, sz);
     } else if (where == QUICKLIST_TAIL) {
+        // 尾插法
         quicklistPushTail(quicklist, value, sz);
     }
 }

@@ -1092,13 +1092,15 @@ void resetClient(client *c) {
     }
 }
 
-/* Like processMultibulkBuffer(), but for the inline protocol instead of RESP,
+/*
+ * Like processMultibulkBuffer(), but for the inline protocol instead of RESP,
  * this function consumes the client query buffer and creates a command ready
  * to be executed inside the client structure. Returns C_OK if the command
  * is ready to be executed, or C_ERR if there is still protocol to read to
  * have a well formed command. The function also returns C_ERR when there is
  * a protocol error: in such a case the client structure is setup to reply
- * with the error and close the connection. */
+ * with the error and close the connection.
+ */
 int processInlineBuffer(client *c) {
     char *newline;
     int argc, j;

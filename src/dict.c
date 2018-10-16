@@ -1049,6 +1049,7 @@ static long _dictKeyIndex(dict *d, const void *key, uint64_t hash, dictEntry **e
         return -1;
     for (table = 0; table <= 1; table++) {
         // 计算下标 todo：这里为什么是 & d->ht[table].sizemask?
+        // todo: 因为 len = 2^N 次方, sizemask = 2^N -1 二进制全是 1
         idx = hash & d->ht[table].sizemask;
         /* Search if this slot does not already contain the given key */
         he = d->ht[table].table[idx];

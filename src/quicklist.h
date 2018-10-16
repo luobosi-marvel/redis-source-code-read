@@ -33,14 +33,25 @@
 
 /* Node, quicklist, and Iterator are the only data structures used currently. */
 
-/* quicklistNode is a 32 byte struct describing a ziplist for a quicklist.
+/*
+ * quicklistNode is a 32 byte struct describing a ziplist for a quicklist.
  * We use bit fields keep the quicklistNode at 32 bytes.
  * count: 16 bits, max 65536 (max zl bytes is 65k, so max count actually < 32k).
  * encoding: 2 bits, RAW=1, LZF=2.
  * container: 2 bits, NONE=1, ZIPLIST=2.
  * recompress: 1 bit, bool, true if node is temporarry decompressed for usage.
  * attempted_compress: 1 bit, boolean, used for verifying during testing.
- * extra: 12 bits, free for future use; pads out the remainder of 32 bits */
+ * extra: 12 bits, free for future use; pads out the remainder of 32 bits
+ *
+ * quicklistNode是一个32字节的结构，描述了快速列表的ziplist。
+ * 我们使用位字段将quicklistNode保持为32个字节。
+ * 计数：16位，最大65536（最大zl字节为65k，因此最大计数实际上<32k）。
+ * 编码：2位，RAW = 1，LZF = 2。
+ * 容器：2位，NONE = 1，ZIPLIST = 2。
+ *  recompress：1 bit，bool，如果节点被临时解压缩以供使用，则为true。
+ *  attempt_compress：1 bit，boolean，用于在测试期间进行验证。
+ * 额外：12位，以后可以免费使用; 填充32位的剩余部分
+ */
 typedef struct quicklistNode {
     // quicklist 前驱节点
     struct quicklistNode *prev;
@@ -64,11 +75,19 @@ typedef struct quicklistNode {
     unsigned int extra : 10; /* more bits to steal for future usage */
 } quicklistNode;
 
-/* quicklistLZF is a 4+N byte struct holding 'sz' followed by 'compressed'.
+/*
+ * quicklistLZF is a 4+N byte struct holding 'sz' followed by 'compressed'.
  * 'sz' is byte length of 'compressed' field.
  * 'compressed' is LZF data with total (compressed) length 'sz'
  * NOTE: uncompressed length is stored in quicklistNode->sz.
- * When quicklistNode->zl is compressed, node->zl points to a quicklistLZF */
+ * When quicklistNode->zl is compressed, node->zl points to a quicklistLZF
+ *
+ * quicklistLZF是一个4 + N字节结构，保存'sz'后跟'compressed'。
+ * 'sz'是'压缩'字段的字节长度。
+ * 'compressed'是LZF数据，总（压缩）长度'sz'
+ * 注意：未压缩长度存储在quicklistNode-> sz中。
+ * 当quicklistNode-> zl被压缩时，node-> zl指向quicklistLZF
+ */
 typedef struct quicklistLZF {
     // LZF 压缩后占用的字节数
     unsigned int sz; /* LZF size in bytes*/
@@ -76,12 +95,20 @@ typedef struct quicklistLZF {
     char compressed[];
 } quicklistLZF;
 
-/* quicklist is a 40 byte struct (on 64-bit systems) describing a quicklist.
+/*
+ * quicklist is a 40 byte struct (on 64-bit systems) describing a quicklist.
  * 'count' is the number of total entries.
  * 'len' is the number of quicklist nodes.
  * 'compress' is: -1 if compression disabled, otherwise it's the number
  *                of quicklistNodes to leave uncompressed at ends of quicklist.
- * 'fill' is the user-requested (or default) fill factor. */
+ * 'fill' is the user-requested (or default) fill factor. 
+ *
+ * quicklist是一个描述快速列表的40字节结构（在64位系统上）。
+ * 'count'是总条目数。
+ * 'len'是快速列表节点的数量。
+ * 'compress'是：-1如果禁用压缩，否则它是在quicklist的末尾保持未压缩的quicklistNodes的数量。
+ * 'fill'是用户请求的（或默认）填充因子。
+ */
 typedef struct quicklist {
     // 指向 quicklist 的头部
     quicklistNode *head;

@@ -225,9 +225,11 @@ void dbOverwrite(redisDb *db, robj *key, robj *val) {
  * 应通过此接口创建数据库中的所有新 key。
  */
 void setKey(redisDb *db, robj *key, robj *val) {
+    // 先查看是否存在，如果不存在就直接添加
     if (lookupKeyWrite(db,key) == NULL) {
         dbAdd(db,key,val);
     } else {
+        // 如果存在就直接覆盖
         dbOverwrite(db,key,val);
     }
     // 级数引用 + 1
