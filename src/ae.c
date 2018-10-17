@@ -311,14 +311,16 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
     long long maxId;
     time_t now = time(NULL);
 
-    /* If the system clock is moved to the future, and then set back to the
+    /*
+     * If the system clock is moved to the future, and then set back to the
      * right value, time events may be delayed in a random way. Often this
      * means that scheduled operations will not be performed soon enough.
      *
      * Here we try to detect system clock skews, and force all the time
      * events to be processed ASAP when this happens: the idea is that
      * processing events earlier is less dangerous than delaying them
-     * indefinitely, and practice suggests it is. */
+     * indefinitely, and practice suggests it is.
+     */
     if (now < eventLoop->lastTime) {
         te = eventLoop->timeEventHead;
         while (te) {
@@ -410,7 +412,12 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags) {
      * Note that we want call select() even if there are no
      * file events to process as long as we want to process time
      * events, in order to sleep until the next time event is ready
-     * to fire. 
+     * to fire.
+     *
+     * 请注意，即使没有，也要调用select（）
+     * 只要我们想处理时间，就要处理要处理的事件
+     * 事件，以便睡到下一次事件准备好
+     * 开火。
      */
     if (eventLoop->maxfd != -1 ||
         ((flags & AE_TIME_EVENTS) && !(flags & AE_DONT_WAIT))) {
@@ -454,14 +461,17 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags) {
             }
         }
 
-        /* Call the multiplexing API, will return only on timeout or when
-         * some event fires. */
+        /*
+         * Call the multiplexing API, will return only on timeout or when
+         * some event fires.
+         * 调用多路复用API，处理请求的命令，每个请求命令都会封装成一个文件事件等待处理
+         */
         numevents = aeApiPoll(eventLoop, tvp);
 
         /* After sleep callback. */
         if (eventLoop->aftersleep != NULL && flags & AE_CALL_AFTER_SLEEP)
             eventLoop->aftersleep(eventLoop);
-
+        // 处理所有的文件事件
         for (j = 0; j < numevents; j++) {
             aeFileEvent *fe = &eventLoop->events[eventLoop->fired[j].fd];
             int mask = eventLoop->fired[j].mask;
@@ -492,7 +502,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags) {
                 fired++;
             }
 
-            /* Fire the writable event. */
+            /* Fire the writable event. 写事件 */
             if (fe->mask & mask & AE_WRITABLE) {
                 if (!fired || fe->wfileProc != fe->rfileProc) {
                     fe->wfileProc(eventLoop, fd, fe->clientData, mask);
@@ -500,8 +510,12 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags) {
                 }
             }
 
-            /* If we have to invert the call, fire the readable event now
-             * after the writable one. */
+            /*
+             * If we have to invert the call, fire the readable event now
+             * after the writable one.
+             *
+             * 读事件
+             */
             if (invert && fe->mask & mask & AE_READABLE) {
                 if (!fired || fe->wfileProc != fe->rfileProc) {
                     fe->rfileProc(eventLoop, fd, fe->clientData, mask);

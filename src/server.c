@@ -1186,27 +1186,37 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     }
 
 
-    /* AOF postponed flush: Try at every cron cycle if the slow fsync
-     * completed. */
+    /*
+     * AOF postponed flush: Try at every cron cycle if the slow fsync
+     * completed.
+     */
     if (server.aof_flush_postponed_start) flushAppendOnlyFile(0);
 
-    /* AOF write errors: in this case we have a buffer to flush as well and
+    /*
+     * AOF write errors: in this case we have a buffer to flush as well and
      * clear the AOF error in case of success to make the DB writable again,
      * however to try every second is enough in case of 'hz' is set to
-     * an higher frequency. */
+     * an higher frequency.
+     */
     run_with_period(1000) {
         if (server.aof_last_write_status == C_ERR)
             flushAppendOnlyFile(0);
     }
 
     /* Close clients that need to be closed asynchronous */
+    // 关闭需要异步关闭的客户端
     freeClientsInAsyncFreeQueue();
 
     /* Clear the paused clients flag if needed. */
+    // 如果需要，清除暂停的客户端标志。
     clientsArePaused(); /* Don't check return value, just use the side effect.*/
 
-    /* Replication cron function -- used to reconnect to master,
-     * detect transfer failures, start background RDB transfers and so forth. */
+    /*
+     * Replication cron function -- used to reconnect to master,
+     * detect transfer failures, start background RDB transfers and so forth.
+     * 复制cron函数 - 用于重新连接到master，
+      *检测传输失败，启动后台RDB传输等。
+     */
     run_with_period(1000) replicationCron();
 
     /* Run the Redis Cluster cron. */

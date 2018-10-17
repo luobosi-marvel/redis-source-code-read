@@ -490,10 +490,19 @@ void delGenericCommand(client *c, int lazy) {
     addReplyLongLong(c,numdel);
 }
 
+/**
+ * 同步删除 key
+ * @param c
+ */
 void delCommand(client *c) {
     delGenericCommand(c,0);
 }
 
+/**
+ * 异步删除
+ *
+ * @param c
+ */
 void unlinkCommand(client *c) {
     delGenericCommand(c,1);
 }
