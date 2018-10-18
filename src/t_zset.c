@@ -66,9 +66,14 @@
 int zslLexValueGteMin(sds value, zlexrangespec *spec);
 int zslLexValueLteMax(sds value, zlexrangespec *spec);
 
-/* Create a skiplist node with the specified number of levels.
- * The SDS string 'ele' is referenced by the node after the call. */
+/*
+ * Create a skiplist node with the specified number of levels.
+ * The SDS string 'ele' is referenced by the node after the call.
+ *
+ * 创建具有指定级别数和指定 score 的skiplist节点。节点引用SDS字符串'ele'。
+ */
 zskiplistNode *zslCreateNode(int level, double score, sds ele) {
+    // 分配内存
     zskiplistNode *zn =
         zmalloc(sizeof(*zn)+level*sizeof(struct zskiplistLevel));
     zn->score = score;
@@ -76,7 +81,11 @@ zskiplistNode *zslCreateNode(int level, double score, sds ele) {
     return zn;
 }
 
-/* Create a new skiplist. */
+/*
+ * Create a new skiplist.
+ *
+ * 创建一个跳跃表
+ */
 zskiplist *zslCreate(void) {
     int j;
     zskiplist *zsl;
@@ -120,7 +129,9 @@ void zslFree(zskiplist *zsl) {
  * The return value of this function is between 1 and ZSKIPLIST_MAXLEVEL
  * (both inclusive), with a powerlaw-alike distribution where higher
  * levels are less likely to be returned.
+ *
  * todo: 幂次定律
+ * 根据幂次定律随机获取一个级别
  */
 int zslRandomLevel(void) {
     int level = 1;
@@ -129,9 +140,13 @@ int zslRandomLevel(void) {
     return (level<ZSKIPLIST_MAXLEVEL) ? level : ZSKIPLIST_MAXLEVEL;
 }
 
-/* Insert a new node in the skiplist. Assumes the element does not already
+/*
+ * Insert a new node in the skiplist. Assumes the element does not already
  * exist (up to the caller to enforce that). The skiplist takes ownership
- * of the passed SDS string 'ele'. */
+ * of the passed SDS string 'ele'.
+ *
+ * 往跳跃表中添加一个元素
+ */
 zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
     // C 语言数组长度一旦确定就不允许修改
     // 这里和层级 level 中指向的元素相同
@@ -145,7 +160,7 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
     for (i = zsl->level-1; i >= 0; i--) {
         /* store rank that is crossed to reach the insert position 将字符插入到指定位置*/
         rank[i] = i == (zsl->level-1) ? 0 : rank[i+1];
-        // 先根据分值比较，如果分值都相同的情况下，再比较字符串的长度
+        // todo: 先根据分值比较，如果分值都相同的情况下，再比较字符串的长度
         while (x->level[i].forward &&
                 (x->level[i].forward->score < score ||
                     (x->level[i].forward->score == score &&
@@ -157,10 +172,15 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
         }
         update[i] = x;
     }
-    /* we assume the element is not already inside, since we allow duplicated
+    /*
+     * we assume the element is not already inside, since we allow duplicated
      * scores, reinserting the same element should never happen since the
      * caller of zslInsert() should test in the hash table if the element is
-     * already inside or not. */
+     * already inside or not.
+     *
+     * 我们假设元素不在内部，因为我们允许重复分数，重新插入相同的元素应该永远不会发生，因为
+     * 如果元素是，则zslInsert（）的调用者应该在哈希表中进行测试已经在里面或没有。
+     */
     level = zslRandomLevel();
     // 如果计算出的层级比当前跳跃表的层级更高
     if (level > zsl->level) {
@@ -198,7 +218,11 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
     return x;
 }
 
-/* Internal function used by zslDelete, zslDeleteByScore and zslDeleteByRank */
+/*
+ * Internal function used by zslDelete, zslDeleteByScore and zslDeleteByRank
+ *
+ * zslDelete，zslDeleteByScore和zslDeleteByRank 使用的内部函数
+ */
 void zslDeleteNode(zskiplist *zsl, zskiplistNode *x, zskiplistNode **update) {
     int i;
     for (i = 0; i < zsl->level; i++) {
@@ -219,14 +243,16 @@ void zslDeleteNode(zskiplist *zsl, zskiplistNode *x, zskiplistNode **update) {
     zsl->length--;
 }
 
-/* Delete an element with matching score/element from the skiplist.
+/*
+ * Delete an element with matching score/element from the skiplist.
  * The function returns 1 if the node was found and deleted, otherwise
  * 0 is returned.
  *
  * If 'node' is NULL the deleted node is freed by zslFreeNode(), otherwise
  * it is not freed (but just unlinked) and *node is set to the node pointer,
  * so that it is possible for the caller to reuse the node (including the
- * referenced SDS string at node->ele). */
+ * referenced SDS string at node->ele).
+ */
 int zslDelete(zskiplist *zsl, double score, sds ele, zskiplistNode **node) {
     zskiplistNode *update[ZSKIPLIST_MAXLEVEL], *x;
     int i;
@@ -426,10 +452,12 @@ unsigned long zslDeleteRangeByRank(zskiplist *zsl, unsigned int start, unsigned 
     return removed;
 }
 
-/* Find the rank for an element by both score and key.
+/*
+ * Find the rank for an element by both score and key.
  * Returns 0 when the element cannot be found, rank otherwise.
  * Note that the rank is 1-based due to the span of zsl->header to the
- * first element. */
+ * first element.
+ */
 unsigned long zslGetRank(zskiplist *zsl, double score, sds ele) {
     zskiplistNode *x;
     unsigned long rank = 0;
