@@ -2395,20 +2395,25 @@ void call(client *c, int flags) {
     start = ustime();
     // todo: 命令真正执行的地方
     c->cmd->proc(c);
+    // 记录命令执行的时间
     duration = ustime() - start;
 
 
     dirty = server.dirty - dirty;
     if (dirty < 0) dirty = 0;
 
-    /* When EVAL is called loading the AOF we don't want commands called
-     * from Lua to go into the slowlog or to populate statistics. */
+    /*
+     * When EVAL is called loading the AOF we don't want commands called
+     * from Lua to go into the slowlog or to populate statistics.
+     */
     if (server.loading && c->flags & CLIENT_LUA)
         flags &= ~(CMD_CALL_SLOWLOG | CMD_CALL_STATS);
 
-    /* If the caller is Lua, we want to force the EVAL caller to propagate
+    /*
+     * If the caller is Lua, we want to force the EVAL caller to propagate
      * the script if the command flag or client flag are forcing the
-     * propagation. */
+     * propagation.
+     */
     if (c->flags & CLIENT_LUA && server.lua_caller) {
         if (c->flags & CLIENT_FORCE_REPL)
             server.lua_caller->flags |= CLIENT_FORCE_REPL;
@@ -2416,13 +2421,15 @@ void call(client *c, int flags) {
             server.lua_caller->flags |= CLIENT_FORCE_AOF;
     }
 
-    /* Log the command into the Slow log if needed, and populate the
-     * per-command statistics that we show in INFO commandstats. */
+    /*
+     * Log the command into the Slow log if needed, and populate the
+     * per-command statistics that we show in INFO commandstats.
+     */
     if (flags & CMD_CALL_SLOWLOG && c->cmd->proc != execCommand) {
         char *latency_event = (c->cmd->flags & CMD_FAST) ?
                               "fast-command" : "command";
         latencyAddSampleIfNeeded(latency_event, duration / 1000);
-        // todo：往 slow log 里面添加一个元素
+        // todo：每个命令都会要进行执行时间判断。逻辑在该方法里面
         slowlogPushEntryIfNeeded(c, c->argv, c->argc, duration);
     }
     if (flags & CMD_CALL_STATS) {

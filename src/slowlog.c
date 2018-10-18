@@ -62,7 +62,7 @@ slowlogEntry *slowlogCreateEntry(client *c, robj **argv, int argc, long long dur
          * Logging too many arguments is a useless memory waste, so we stop
          * at SLOWLOG_ENTRY_MAX_ARGC, but use the last argument to specify
          * how many remaining arguments there were in the original command.
-         * 记录太多的参数是在内存浪费，所以我们停下来在SLOWLOG_ENTRY_MAX_ARGC，
+         * 记录太多的参数是在内存浪费，所以我们停下来在 SLOWLOG_ENTRY_MAX_ARGC，
          * 但使用最后一个参数指定原始命令中有多少剩余参数。
          */
         if (slargc != argc && j == slargc-1) {
@@ -139,9 +139,9 @@ void slowlogInit(void) {
  *
  */
 void slowlogPushEntryIfNeeded(client *c, robj **argv, int argc, long long duration) {
-    // 如果 slowlog_log_slower)than 小于 0，则表示 slowlog 该功能被禁用了
+    // todo: 如果 slowlog_log_slower)than 小于 0，则表示 slowlog 该功能被禁用了
     if (server.slowlog_log_slower_than < 0) return; /* Slowlog disabled */
-    // 对超时的命令进行记录
+    // 如果命令的时间超过了指定的阈值，那么则对超时的命令进行记录
     if (duration >= server.slowlog_log_slower_than)
         // 头插法
         listAddNodeHead(server.slowlog,
