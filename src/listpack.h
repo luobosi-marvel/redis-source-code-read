@@ -43,8 +43,16 @@
 #define LP_BEFORE 0
 #define LP_AFTER 1
 #define LP_REPLACE 2
-
+/**
+ * 新建一个 lp
+ *
+ * @return
+ */
 unsigned char *lpNew(void);
+/**
+ * 释放一个 lp
+ * @param lp 数组首地址
+ */
 void lpFree(unsigned char *lp);
 unsigned char *lpInsert(unsigned char *lp, unsigned char *ele, uint32_t size, unsigned char *p, int where, unsigned char **newp);
 unsigned char *lpAppend(unsigned char *lp, unsigned char *ele, uint32_t size);

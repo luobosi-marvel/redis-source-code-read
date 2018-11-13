@@ -193,6 +193,7 @@ void sdsclear(sds s) {
  * by sdslen(), but only the free buffer space we have. */
 sds sdsMakeRoomFor(sds s, size_t addlen) {
     void *sh, *newsh;
+    // 计算 s 可用的长度
     size_t avail = sdsavail(s);
     size_t len, newlen;
     char type, oldtype = s[-1] & SDS_TYPE_MASK;
@@ -200,10 +201,12 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
 
     /* Return ASAP if there is enough space left. */
     if (avail >= addlen) return s;
-
+    // 计算 s 长度
     len = sdslen(s);
     sh = (char*)s-sdsHdrSize(oldtype);
+    // 字符串长度 + 追加字符串的长度
     newlen = (len+addlen);
+    // todo：预分配空间
     if (newlen < SDS_MAX_PREALLOC)
         newlen *= 2;
     else
@@ -374,6 +377,7 @@ sds sdsgrowzero(sds s, size_t len) {
  * After the call, the passed sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
 sds sdscatlen(sds s, const void *t, size_t len) {
+    // 计算原来字符串的长度
     size_t curlen = sdslen(s);
 
     s = sdsMakeRoomFor(s,len);

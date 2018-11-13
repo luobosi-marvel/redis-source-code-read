@@ -225,6 +225,9 @@ sds sdsgrowzero(sds s, size_t len);
 /*
  * todo: 字符串连接操作
  * 这里涉及拷贝内存操作
+ * s: 原来字符串
+ * t: 追加的字符串
+ * len: 追加字符串的长度
  */
 sds sdscatlen(sds s, const void *t, size_t len);
 /* 字符串连接操作 */

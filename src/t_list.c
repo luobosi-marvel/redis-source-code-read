@@ -181,6 +181,7 @@ void pushGenericCommand(client *c, int where) {
         return;
     }
     // 重要流程在这里，这里会往quicklist 里面添加元素
+    // lpush mylist 1 2 3 4 5
     for (j = 2; j < c->argc; j++) {
         // 如果该 key 在字典中不存在，则说明该 list 也不存在，那么需要创建一个底层指向 quicklist 结构的 object ，并往字典中添加该 key-value
         if (!lobj) {
