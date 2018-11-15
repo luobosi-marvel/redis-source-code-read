@@ -141,7 +141,7 @@ sds sdsnew(const char *init) {
     return sdsnewlen(init, initlen);
 }
 
-/* Duplicate an sds string. */
+/* 复制 sds 字符串 */
 sds sdsdup(const sds s) {
     return sdsnewlen(s, sdslen(s));
 }

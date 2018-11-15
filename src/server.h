@@ -833,9 +833,9 @@ struct sharedObjectsStruct {
     sds minstring, maxstring;
 };
 
-/* 
-  ZSETs use a specialized version of Skiplists 
-  跳跃表中的数据节点
+/**
+ * ZSETs use a specialized version of Skiplists
+ * 跳跃表中的数据节点
  */
 typedef struct zskiplistNode {
     sds ele;
@@ -846,19 +846,37 @@ typedef struct zskiplistNode {
     struct zskiplistLevel {
     	// 前进指针
         struct zskiplistNode *forward;
-        // 跨度
+        /**
+         * 跨度实际上是用来计算元素排名(rank)的，
+         * 在查找某个节点的过程中，将沿途访过的所有层的跨度累积起来，
+         * 得到的结果就是目标节点在跳跃表中的排位
+         */
         unsigned long span;
     } level[];
 } zskiplistNode;
 
+/**
+ * 跳跃表结构体
+ */
 typedef struct zskiplist {
     struct zskiplistNode *header, *tail;
     unsigned long length;
     int level;
 } zskiplist;
 
+/**
+ * 有序集合结构体
+ */
 typedef struct zset {
+    /*
+     * Redis 会将跳跃表中所有的元素和分值组成
+     * key-value 的形式保存在字典中
+     * todo：注意：该字典并不是 Redis DB 中的字典，只属于有序集合
+     */
     dict *dict;
+    /*
+     * 底层指向的跳跃表的指针
+     */
     zskiplist *zsl;
 } zset;
 
