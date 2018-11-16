@@ -650,21 +650,44 @@ typedef struct redisDb {
     list *defrag_later;         /* List of key names to attempt to defrag one by one, gradually. */
 } redisDb;
 
-/* 
+ /**
   * 客户端事务命令结构体
   * Client MULTI/EXEC state 
   */
 typedef struct multiCmd {
+    /**
+     * 命令执行的参数列表
+     */
     robj **argv;
+    /**
+     * 命令执行的参数的个数
+     */
     int argc;
-    // redisCommand 结构体
+    /**
+     * 具体要执行的命令指针
+     */
     struct redisCommand *cmd;
 } multiCmd;
 
+/**
+ * 事务状态结构体
+ */
 typedef struct multiState {
+    /**
+     * 事务中命令列表
+     */
     multiCmd *commands;     /* Array of MULTI commands */
+    /**
+     * 事务队列里面命令的个数
+     */
     int count;              /* Total number of MULTI commands */
+    /**
+     * 用于同步复制
+     */
     int minreplicas;        /* MINREPLICAS for synchronous replication */
+    /**
+     * 同步复制超时时间
+     */
     time_t minreplicas_timeout; /* MINREPLICAS timeout as unixtime. */
 } multiState;
 

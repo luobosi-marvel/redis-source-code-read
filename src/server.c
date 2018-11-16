@@ -2507,6 +2507,8 @@ void call(client *c, int flags) {
  * If C_OK is returned the client is still alive and valid and
  * other operations can be performed by the caller. Otherwise
  * if C_ERR is returned the client was destroyed (i.e. after QUIT).
+ *
+ * todo: 命令入口
  */
 int processCommand(client *c) {
     /* The QUIT command is handled separately. Normal command procs will
@@ -2717,7 +2719,7 @@ int processCommand(client *c) {
         queueMultiCommand(c);
         addReply(c, shared.queued);
     } else {
-        // todo: call 调用
+        // todo: call 调用，这里面就会调用非事务命令的方法
         call(c, CMD_CALL_FULL);
         c->woff = server.master_repl_offset;
         if (listLength(server.ready_keys))
