@@ -1100,6 +1100,7 @@ void resetClient(client *c) {
  * have a well formed command. The function also returns C_ERR when there is
  * a protocol error: in such a case the client structure is setup to reply
  * with the error and close the connection.
+ * 从输入缓冲区中读取数据
  */
 int processInlineBuffer(client *c) {
     char *newline;

@@ -598,15 +598,50 @@ typedef struct RedisModuleDigest {
 #define LRU_CLOCK_RESOLUTION 1000 /* LRU clock resolution in ms */
 
 #define OBJ_SHARED_REFCOUNT INT_MAX
- // Redis 存储的数据都是用 redisObject 来封装，包括 string，hash，list，set，zset  在内的所有数据类型
+
+/**
+ * Redis 存储的 value 数据都是用 redisObject 来封装的
+ * 包括 string，hash，list，set，zset  在内的所有数据类型
+ */
 typedef struct redisObject {
-    unsigned type:4;		// 对象类型
-    unsigned encoding:4;	// 内部编码类型
-    // LRU 计时时钟
+    /**
+     * 表示当前对象使用的数据类型，
+     * Redis主要支持5种数据类型:string,hash,list,set,zset。
+     * 可以使用type {key}命令查看对象所属类型，
+     * type命令返回的是值对象类型，键都是string类型。
+     */
+    unsigned type:4;
+    /**
+     * 表示Redis内部编码类型，encoding在Redis内部使用，
+     * 代表当前对象内部采用哪种数据结构实现。
+     * 理解Redis内部编码方式对于优化内存非常重要 ，
+     * 同一个对象采用不同的编码实现内存占用存在明显差异，
+     * 具体细节见之后编码优化部分。
+     */
+    unsigned encoding:4;
+    /**
+     * 记录对象最后一次被访问的时间，当配置了
+     * maxmemory 和 maxmemory-policy=volatile-lru | allkeys-lru 时，
+     * 用于辅助LRU算法删除键数据。
+     * 可以使用 object idletime {key} 命令在不更新 lru 字段情况下查看当前键的空闲时间。
+     */
     unsigned lru:LRU_BITS; /* LRU time (relative to global lru_clock) or
                             * LFU data (least significant 8 bits frequency
                             * and most significant 16 bits access time). */
-    int refcount;			// 引用计数器
+    /**
+     * 记录当前对象被引用的次数，用于通过引用次数回收内存，
+     * 当refcount=0时，可以安全回收当前对象空间。
+     * 使用 object refcount {key} 获取当前对象引用。
+     */
+    int refcount;
+    /**
+     * 与对象的数据内容相关，如果是整数直接存储数据，否则表示指向数据的指针。
+     * Redis在3.0 之后对值对象是字符串且长度 <=39 字节的数据，
+     * 内部编码为 embstr 类型，字符串 sds 和 redisObject 一起分配，
+     * 从而只要一次内存操作。
+     * todo: 因此在高并发的场景尽量是我们的字符串保持 39 字节内，
+     * 减少创建redisObject内存分配次数从而提高性能。
+     */
     void *ptr;			// 指向底层实现数据结构的指针
 } robj;
 
@@ -834,7 +869,7 @@ struct moduleLoadQueueEntry {
 
 /**
  * todo: Redis 共享变量
- * 共享对象结构体
+ * 共享对象结构体，注意里面每一个共享对象都是 robj(redisObject) 对象
  * 
  * 这里面有部分值是要放到输出缓冲区里面的，为了保证内存中只有一份值，所以
  * 可以将这些对象共享起来，这样可以节约内存。
