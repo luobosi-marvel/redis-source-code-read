@@ -1223,6 +1223,7 @@ werr: /* Write error. */
 
 /**
  * 将数据信息保存到 磁盘中去
+ * 我们可以看有一个中间过程，
  * Save the DB on disk. Return C_ERR on error, C_OK on success.
  */
 int rdbSave(char *filename, rdbSaveInfo *rsi) {
@@ -1233,7 +1234,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
     FILE *fp;
     rio rdb;
     int error = 0;
-
+    // 零时文件
     snprintf(tmpfile,256,"temp-%d.rdb", (int) getpid());
     // 按读方式打开 tmpfile 的文件
     fp = fopen(tmpfile,"w");
@@ -1254,7 +1255,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
 
     // rdb 保存是否逐步增加 fsync
     if (server.rdb_save_incremental_fsync)
-        // 每次同步 REDIS_AUTOSYNC_BYTES = 32M
+        // todo：每次同步 REDIS_AUTOSYNC_BYTES = 32M
         rioSetAutoSync(&rdb,REDIS_AUTOSYNC_BYTES);
 
     if (rdbSaveRio(&rdb,&error,RDB_SAVE_NONE,rsi) == C_ERR) {
@@ -1307,17 +1308,26 @@ werr:
     return C_ERR;
 }
 
+/**
+ * 保存 RDB 文件
+ *
+ * @param filename 文件名称
+ * @param rsi
+ * @return
+ */
 int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
     pid_t childpid;
     long long start;
 
     if (server.aof_child_pid != -1 || server.rdb_child_pid != -1) return C_ERR;
 
+    // 保存文件之前的 字典修改数
     server.dirty_before_bgsave = server.dirty;
     server.lastbgsave_try = time(NULL);
     openChildInfoPipe();
 
     start = ustime();
+    // todo：fork 一个子进程来进行 RDB 持久化操作
     if ((childpid = fork()) == 0) {
         int retval;
 

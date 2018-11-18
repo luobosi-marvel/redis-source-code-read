@@ -761,7 +761,7 @@ int incrementallyRehash(int dbid) {
  * running childs.
  */
 void updateDictResizePolicy(void) {
-    // 这里说明没有进程在对 redis
+    // 这里说明没有进程在对 redis 进行持久化
     if (server.rdb_child_pid == -1 && server.aof_child_pid == -1)
         dictEnableResize();
     else
@@ -1151,6 +1151,9 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
              * CONFIG_BGSAVE_RETRY_DELAY seconds already elapsed.
              *
              * 判断自动保存间隔
+             * 1. 修改次数是否超过了配置的 save 的次数
+             * 2. 上次保存的时间是否超过了 save 的时间
+             * 3. 是否超过了保存的间隔时间 || 保存状态是否良好
              */
             if (server.dirty >= sp->changes &&
                 server.unixtime - server.lastsave > sp->seconds &&
@@ -1159,6 +1162,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
                  server.lastbgsave_status == C_OK)) {
                 serverLog(LL_NOTICE, "%d changes in %d seconds. Saving...",
                           sp->changes, (int) sp->seconds);
+                // rdb 保存的 info 信息
                 rdbSaveInfo rsi, *rsiptr;
                 rsiptr = rdbPopulateSaveInfo(&rsi);
                 // 后台持久化操作
