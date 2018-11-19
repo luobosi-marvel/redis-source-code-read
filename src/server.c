@@ -2049,6 +2049,7 @@ void initServer(void) {
      * expired keys and so forth.
      *
      * 设置时间事件处理函数 serverCron()
+     * 我们知道 Redis 里面有一些定时操作的任务，比如定时清理内存，定时
      */
     if (aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR) {
         serverPanic("Can't create event loop timers.");
@@ -4019,7 +4020,11 @@ int main(int argc, char **argv) {
 
     /* We need to init sentinel right now as parsing the configuration file
      * in sentinel mode will have the effect of populating the sentinel
-     * data structures with master nodes to monitor. */
+     * data structures with master nodes to monitor.
+     *
+     * 我们现在需要初始化sentinel来解析配置文件
+     * 在哨兵模式中将具有填充哨兵的效果具有要监控的主节点的数据结构。
+     */
     if (server.sentinel_mode) {
         initSentinelConfig();
         initSentinel();
