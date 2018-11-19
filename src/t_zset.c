@@ -2510,12 +2510,15 @@ void zrangeGenericCommand(client *c, int reverse) {
 
         /* Check if starting point is trivial, before doing log(N) lookup. */
         if (reverse) {
+            // 这里选择从尾部开始遍历
             ln = zsl->tail;
             if (start > 0)
                 ln = zslGetElementByRank(zsl, llen - start);
         } else {
+            // 从头部开始遍历
             ln = zsl->header->level[0].forward;
             if (start > 0)
+                // 获取指定排位上的元素
                 ln = zslGetElementByRank(zsl, start + 1);
         }
 
@@ -2525,6 +2528,7 @@ void zrangeGenericCommand(client *c, int reverse) {
             addReplyBulkCBuffer(c, ele, sdslen(ele));
             if (withscores)
                 addReplyDouble(c, ln->score);
+            // todo：脑补一下跳跃表的结构就知道这句话的含义了
             ln = reverse ? ln->backward : ln->level[0].forward;
         }
     } else {
