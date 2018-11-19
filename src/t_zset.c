@@ -2428,6 +2428,12 @@ void zinterstoreCommand(client *c) {
     zunionInterGenericCommand(c, c->argv[1], SET_OP_INTER);
 }
 
+/**
+ * 根据 reverse 获取范围内的元素
+ *
+ * @param c
+ * @param reverse
+ */
 void zrangeGenericCommand(client *c, int reverse) {
     robj *key = c->argv[1];
     robj *zobj;
