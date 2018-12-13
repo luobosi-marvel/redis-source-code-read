@@ -1282,6 +1282,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
      */
     if (rename(tmpfile,filename) == -1) {
         char *cwdp = getcwd(cwd,MAXPATHLEN);
+        // 打印日志
         serverLog(LL_WARNING,
             "Error moving temp DB file %s on the final "
             "destination %s (in server root dir %s): %s",
@@ -1302,6 +1303,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
     return C_OK;
 
 werr:
+    // todo: rdb 写入磁盘发生错误，可能是磁盘已经满了
     serverLog(LL_WARNING,"Write error saving DB on disk: %s", strerror(errno));
     fclose(fp);
     unlink(tmpfile);
@@ -1323,6 +1325,7 @@ int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
 
     // 保存文件之前的 字典修改数
     server.dirty_before_bgsave = server.dirty;
+    // 设置当前执行持久化的时间点
     server.lastbgsave_try = time(NULL);
     openChildInfoPipe();
 
@@ -1331,7 +1334,7 @@ int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
     if ((childpid = fork()) == 0) {
         int retval;
 
-        /* Child */
+        /* Child 子进程，关闭 socket 监听 */
         closeListeningSockets(0);
         redisSetProcTitle("redis-rdb-bgsave");
         retval = rdbSave(filename,rsi);
@@ -2435,6 +2438,7 @@ void saveCommand(client *c) {
     }
 }
 
+// todo: bgsave 命令 快照技术利用了 linux 的写时复制
 /* BGSAVE [SCHEDULE] */
 void bgsaveCommand(client *c) {
     int schedule = 0;
@@ -2453,6 +2457,7 @@ void bgsaveCommand(client *c) {
     rdbSaveInfo rsi, *rsiptr;
     rsiptr = rdbPopulateSaveInfo(&rsi);
 
+    // fock 子进程失败，则说明已经有进程在执行持久化操作了
     if (server.rdb_child_pid != -1) {
         addReplyError(c,"Background save already in progress");
     } else if (server.aof_child_pid != -1) {

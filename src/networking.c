@@ -82,7 +82,7 @@ void linkClient(client *c) {
 }
 
 /**
- * 创建一个 client
+ * 创建一个客户端 client
  *
  * @param fd
  * @return
