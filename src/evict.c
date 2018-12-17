@@ -312,8 +312,18 @@ unsigned long LFUTimeElapsed(unsigned long ldt) {
     return 65535-ldt+now;
 }
 
-/* Logarithmically increment a counter. The greater is the current counter value
- * the less likely is that it gets really implemented. Saturate it at 255. */
+/*
+ * Logarithmically increment a counter. The greater is the current counter value
+ * the less likely is that it gets really implemented. Saturate it at 255.
+ *
+ * 8位的计数器很快就会溢出，是的，相对于简单计数器，作者采用逻辑计数器。逻辑计数器的实现：
+ * 基本上计数器的较大者，更小的可能计数器会增加：上面的代码计算p位于0~1之间，但计数器增长时会越来越小，
+ * 位于0-1的随机数r，只会但满足r<p时计数器才会加一。你可以配置计数器增长的速率，如果使用默认配置，会发生：
+ * - 100次访问后，计数器=10；
+ * - 1000次访问是是18；
+ * - 10万次访问是142；
+ * - 100万次访问后达到255，并不在继续增长；
+ */
 uint8_t LFULogIncr(uint8_t counter) {
     if (counter == 255) return 255;
     double r = (double)rand()/RAND_MAX;

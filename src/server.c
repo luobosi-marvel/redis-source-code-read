@@ -928,13 +928,20 @@ void databasesCron(void) {
         /* Don't test more DBs than we have. */
         if (dbs_per_call > server.dbnum) dbs_per_call = server.dbnum;
 
-        /* Resize */
+        /*
+         * Resize
+         * todo：定时任务会重新计算 hash table 的大小
+         */
         for (j = 0; j < dbs_per_call; j++) {
             tryResizeHashTables(resize_db % server.dbnum);
             resize_db++;
         }
 
-        /* Rehash */
+        /*
+         * Rehash
+         *
+         * todo：如果开通了 rehash 操作，会定时增加 hash table 大小
+         */
         if (server.activerehashing) {
             for (j = 0; j < dbs_per_call; j++) {
                 int work_done = incrementallyRehash(rehash_db);
@@ -2584,22 +2591,22 @@ int processCommand(client *c) {
     }
 
     /*
-     * Handle the maxmemory directive. 处理maxmemory指令。
-     *
-     * First we try to free some memory if possible (if there are volatile
-     * keys in the dataset). If there are not the only thing we can do
-     * is returning an error.
-     *
-     * 首先我们尝试释放一些内存（如果有的话）数据集中的键）。 如果没有我们唯一可以做的事情正在返回错误。
+     * Redis 每服务客户端执行一个命令的时候，会检测使用的内存是否超额。如果超额，即进行数据淘汰。
+     * 首先我们尝试释放一些内存（如果有的话）数据集中的键）。
      */
     if (server.maxmemory) {
         int retval = freeMemoryIfNeeded();
-        /* freeMemoryIfNeeded may flush slave output buffers. This may result
-         * into a slave, that may be the active client, to be freed. */
+        /*
+         * freeMemoryIfNeeded may flush slave output buffers. This may result
+         * into a slave, that may be the active client, to be freed.
+         * freeMemoryIfNeeded可以刷新从输出缓冲区。 这可能会导致进入可能是活动客户端的 slave，以便被释放。
+         *
+         */
         if (server.current_client == NULL) return C_ERR;
 
         /* It was impossible to free enough memory, and the command the client
-         * is trying to execute is denied during OOM conditions? Error. */
+         * is trying to execute is denied during OOM conditions? Error.
+         */
         if ((c->cmd->flags & CMD_DENYOOM) && retval == C_ERR) {
             flagTransaction(c);
             addReply(c, shared.oomerr);
