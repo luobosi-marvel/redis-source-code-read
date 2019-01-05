@@ -74,6 +74,9 @@ char *replicationGetSlaveName(client *c) {
 
 /* ---------------------------------- MASTER -------------------------------- */
 
+/**
+ * 创建 backlog 的 buffer
+ */
 void createReplicationBacklog(void) {
     serverAssert(server.repl_backlog == NULL);
     server.repl_backlog = zmalloc(server.repl_backlog_size);
@@ -86,12 +89,16 @@ void createReplicationBacklog(void) {
     server.repl_backlog_off = server.master_repl_offset+1;
 }
 
-/* This function is called when the user modifies the replication backlog
+/*
+ * This function is called when the user modifies the replication backlog
  * size at runtime. It is up to the function to both update the
  * server.repl_backlog_size and to resize the buffer and setup it so that
  * it contains the same data as the previous one (possibly less data, but
  * the most recent bytes, or the same data and more free space in case the
- * buffer is enlarged). */
+ * buffer is enlarged).
+ *
+ * 调整复制备份日志的大小，当replication backlog被修改的时候
+ */
 void resizeReplicationBacklog(long long newsize) {
     if (newsize < CONFIG_REPL_BACKLOG_MIN_SIZE)
         newsize = CONFIG_REPL_BACKLOG_MIN_SIZE;
@@ -113,16 +120,23 @@ void resizeReplicationBacklog(long long newsize) {
     }
 }
 
+/**
+ * 释放备份日志
+ */
 void freeReplicationBacklog(void) {
     serverAssert(listLength(server.slaves) == 0);
     zfree(server.repl_backlog);
     server.repl_backlog = NULL;
 }
 
-/* Add data to the replication backlog.
+/*
+ * Add data to the replication backlog.
  * This function also increments the global replication offset stored at
  * server.master_repl_offset, because there is no case where we want to feed
- * the backlog without incrementing the offset. */
+ * the backlog without incrementing the offset.
+ *
+ * 往备份日志中添加添加数据操作，会引起 master_repl_offset 偏移量的增加
+ */
 void feedReplicationBacklog(void *ptr, size_t len) {
     unsigned char *p = ptr;
 
@@ -148,8 +162,12 @@ void feedReplicationBacklog(void *ptr, size_t len) {
                               server.repl_backlog_histlen + 1;
 }
 
-/* Wrapper for feedReplicationBacklog() that takes Redis string objects
- * as input. */
+/*
+ * Wrapper for feedReplicationBacklog() that takes Redis string objects
+ * as input.
+ *
+ * 往backlog添加数据，以Redis 字符串对象作为参数
+ */
 void feedReplicationBacklogWithObject(robj *o) {
     char llstr[LONG_STR_SIZE];
     void *p;
@@ -165,11 +183,15 @@ void feedReplicationBacklogWithObject(robj *o) {
     feedReplicationBacklog(p,len);
 }
 
-/* Propagate write commands to slaves, and populate the replication backlog
+/*
+ * Propagate write commands to slaves, and populate the replication backlog
  * as well. This function is used if the instance is a master: we use
  * the commands received by our clients in order to create the replication
  * stream. Instead if the instance is a slave and has sub-slaves attached,
- * we use replicationFeedSlavesFromMaster() */
+ * we use replicationFeedSlavesFromMaster()
+ *
+ * 将主数据库复制到从数据库
+ */
 void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc) {
     listNode *ln;
     listIter li;
@@ -300,6 +322,15 @@ void replicationFeedSlavesFromMasterStream(list *slaves, char *buf, size_t bufle
     }
 }
 
+/**
+ * 发送数据给monitor监听者客户端
+ *
+ * @param c
+ * @param monitors
+ * @param dictid
+ * @param argv
+ * @param argc
+ */
 void replicationFeedMonitors(client *c, list *monitors, int dictid, robj **argv, int argc) {
     listNode *ln;
     listIter li;
@@ -339,8 +370,12 @@ void replicationFeedMonitors(client *c, list *monitors, int dictid, robj **argv,
     decrRefCount(cmdobj);
 }
 
-/* Feed the slave 'c' with the replication backlog starting from the
- * specified 'offset' up to the end of the backlog. */
+/*
+ * Feed the slave 'c' with the replication backlog starting from the
+ * specified 'offset' up to the end of the backlog.
+ *
+ * slave从客户单添加备份日志
+ */
 long long addReplyReplicationBacklog(client *c, long long offset) {
     long long j, skip, len;
 
@@ -391,10 +426,12 @@ long long addReplyReplicationBacklog(client *c, long long offset) {
     return server.repl_backlog_histlen - skip;
 }
 
-/* Return the offset to provide as reply to the PSYNC command received
+/*
+ * Return the offset to provide as reply to the PSYNC command received
  * from the slave. The returned value is only valid immediately after
  * the BGSAVE process started and before executing any other command
- * from clients. */
+ * from clients.
+ */
 long long getPsyncInitialOffset(void) {
     return server.master_repl_offset;
 }
