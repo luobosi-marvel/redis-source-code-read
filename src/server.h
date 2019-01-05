@@ -1446,6 +1446,9 @@ typedef struct pubsubPattern {
 typedef void redisCommandProc(client *c);
 typedef int *redisGetKeysProc(struct redisCommand *cmd, robj **argv, int argc, int *numkeys);
 
+
+
+
 /**
  * Redis 所有命令的结构体
  */

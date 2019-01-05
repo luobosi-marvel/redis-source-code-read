@@ -3805,14 +3805,21 @@ int checkForSentinelMode(int argc, char **argv) {
     return 0;
 }
 
-/* Function called at startup to load RDB or AOF file in memory. */
+/*
+ * Function called at startup to load RDB or AOF file in memory.
+ *
+ * 启动时 Redis 会去加载 AOF 文件或 RDB 文件的内容到内存中来
+ * 优先加载 AOF 文件，因为 AOF 文件更新的频率通常比 RDB 文件的更新频率更高
+ */
 void loadDataFromDisk(void) {
     long long start = ustime();
+    // todo：优先加载 AOF 文件
     if (server.aof_state == AOF_ON) {
         if (loadAppendOnlyFile(server.aof_filename) == C_OK)
             serverLog(LL_NOTICE, "DB loaded from append only file: %.3f seconds", (float) (ustime() - start) / 1000000);
     } else {
         rdbSaveInfo rsi = RDB_SAVE_INFO_INIT;
+
         if (rdbLoad(server.rdb_filename, &rsi) == C_OK) {
             serverLog(LL_NOTICE, "DB loaded from disk: %.3f seconds",
                       (float) (ustime() - start) / 1000000);

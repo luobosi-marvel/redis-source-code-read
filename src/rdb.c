@@ -2097,13 +2097,17 @@ eoferr: /* unexpected end of file is handled here with a fatal exit */
     return C_ERR; /* Just to avoid warning */
 }
 
-/* Like rdbLoadRio() but takes a filename instead of a rio stream. The
+/*
+ * Like rdbLoadRio() but takes a filename instead of a rio stream. The
  * filename is open for reading and a rio stream object created in order
  * to do the actual loading. Moreover the ETA displayed in the INFO
  * output is initialized and finalized.
  *
  * If you pass an 'rsi' structure initialied with RDB_SAVE_OPTION_INIT, the
- * loading code will fiil the information fields in the structure. */
+ * loading code will fiil the information fields in the structure.
+ *
+ * todo：加载 RDB 文件
+ */
 int rdbLoad(char *filename, rdbSaveInfo *rsi) {
     FILE *fp;
     rio rdb;
