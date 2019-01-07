@@ -276,8 +276,13 @@ typedef long long mstime_t; /* millisecond time type. */
                                     buffer configuration. Just the first
                                     three: normal, slave, pubsub. */
 
-/* Slave replication state. Used in server.repl_state for slaves to remember
- * what to do next. */
+/*
+ * Slave replication state. Used in server.repl_state for slaves to remember
+ * what to do next.
+ *
+ * todo：主从复制状态
+ *
+ */
 #define REPL_STATE_NONE 0 /* No active replication */
 #define REPL_STATE_CONNECT 1 /* Must connect to master */
 #define REPL_STATE_CONNECTING 2 /* Connecting to master */

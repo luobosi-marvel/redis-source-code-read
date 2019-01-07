@@ -2028,8 +2028,12 @@ void replicationHandleMasterDisconnection(void) {
 }
 
 void slaveofCommand(client *c) {
-    /* SLAVEOF is not allowed in cluster mode as replication is automatically
-     * configured using the current address of the master node. */
+    /*
+     * SLAVEOF is not allowed in cluster mode as replication is automatically
+     * configured using the current address of the master node.
+     *
+     * 由于复制是自动进行的，因此不允许在群集模式下使用 SLAVEOF 使用主节点的当前地址进行配置。
+     */
     if (server.cluster_enabled) {
         addReplyError(c,"SLAVEOF not allowed in cluster mode.");
         return;
@@ -2059,8 +2063,12 @@ void slaveofCommand(client *c) {
             addReplySds(c,sdsnew("+OK Already connected to specified master\r\n"));
             return;
         }
-        /* There was no previous master or the user specified a different one,
-         * we can continue. */
+        /*
+         * There was no previous master or the user specified a different one,
+         * we can continue.
+         *
+         * 没有以前的主人或用户指定了不同的主人，我们可以继续。
+         */
         replicationSetMaster(c->argv[1]->ptr, port);
         sds client = catClientInfoString(sdsempty(),c);
         serverLog(LL_NOTICE,"SLAVE OF %s:%d enabled (user request from '%s')",
@@ -2531,7 +2539,11 @@ long long replicationGetSlaveOffset(void) {
 
 /* --------------------------- REPLICATION CRON  ---------------------------- */
 
-/* Replication cron function, called 1 time per second. */
+/*
+ * Replication cron function, called 1 time per second.
+ *
+ * 主从复制的时间事件，每秒执行一次
+ */
 void replicationCron(void) {
     static long long replication_cron_loops = 0;
 
