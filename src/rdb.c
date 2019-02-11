@@ -1836,8 +1836,10 @@ robj *rdbLoadObject(int rdbtype, rio *rdb) {
     return o;
 }
 
-/* Mark that we are loading in the global state and setup the fields
- * needed to provide loading stats. */
+/*
+ * Mark that we are loading in the global state and setup the fields
+ * needed to provide loading stats.
+ */
 void startLoading(FILE *fp) {
     struct stat sb;
 
@@ -1895,6 +1897,7 @@ int rdbLoadRio(rio *rdb, rdbSaveInfo *rsi, int loading_aof) {
     rdb->max_processing_chunk = server.loading_process_events_interval_bytes;
     if (rioRead(rdb,buf,9) == 0) goto eoferr;
     buf[9] = '\0';
+    // todo: 快速检查所载入的文件是否是 RDB 文件
     if (memcmp(buf,"REDIS",5) != 0) {
         serverLog(LL_WARNING,"Wrong signature trying to load DB from file");
         errno = EINVAL;
@@ -1919,9 +1922,12 @@ int rdbLoadRio(rio *rdb, rdbSaveInfo *rsi, int loading_aof) {
 
         /* Handle special types. */
         if (type == RDB_OPCODE_EXPIRETIME) {
-            /* EXPIRETIME: load an expire associated with the next key
+            /*
+             * EXPIRETIME: load an expire associated with the next key
              * to load. Note that after loading an expire we need to
-             * load the actual type, and continue. */
+             * load the actual type, and continue.
+             *
+             */
             expiretime = rdbLoadTime(rdb);
             expiretime *= 1000;
             continue; /* Read next opcode. */
@@ -2112,12 +2118,15 @@ int rdbLoad(char *filename, rdbSaveInfo *rsi) {
     FILE *fp;
     rio rdb;
     int retval;
-
+    // 判断文件是否可读
     if ((fp = fopen(filename,"r")) == NULL) return C_ERR;
+    // 记录文件是否可读
     startLoading(fp);
     rioInitWithFile(&rdb,fp);
     retval = rdbLoadRio(&rdb,rsi,0);
+    // 关闭文件句柄
     fclose(fp);
+    // 停止加载
     stopLoading();
     return retval;
 }

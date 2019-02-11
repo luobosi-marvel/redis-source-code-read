@@ -317,6 +317,7 @@ void saddCommand(client *c) {
         signalModifiedKey(c->db,c->argv[1]);
         notifyKeyspaceEvent(NOTIFY_SET,"sadd",c->argv[1],c->db->id);
     }
+    // todo: dirty 记录的是服务器进行了多少次休息，而不是客户端执行了多少修改数据的命令
     server.dirty += added;
     addReplyLongLong(c,added);
 }

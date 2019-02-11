@@ -3981,7 +3981,8 @@ int main(int argc, char **argv) {
     但是有时候希望对其中一部分内容只在满足一定条件才进行编译，也就是对一部分内容指定编译条件。
  */
 #ifdef REDIS_TEST
-                                                                                                                            if (argc == 3 && !strcasecmp(argv[1], "test")) {
+    if (argc == 3 && !strcasecmp(argv[1], "test")) {
+    if (argc == 3 && !strcasecmp(argv[1], "test")) {
         if (!strcasecmp(argv[2], "ziplist")) {
             return ziplistTest(argc, argv);
         } else if (!strcasecmp(argv[2], "quicklist")) {

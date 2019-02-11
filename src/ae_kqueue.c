@@ -32,6 +32,9 @@
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
+#include "ae.h"
+#include "zmalloc.h"
+
 
 /**
  * kqueue io 是 mac 系统提供的复用事件模型
@@ -71,7 +74,7 @@ static int aeApiResize(aeEventLoop *eventLoop, int setsize) {
 static void aeApiFree(aeEventLoop *eventLoop) {
     aeApiState *state = eventLoop->apidata;
 
-    close(state->kqfd);
+    // close(state->kqfd);
     zfree(state->events);
     zfree(state);
 }

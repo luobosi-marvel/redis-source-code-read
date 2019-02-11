@@ -210,6 +210,14 @@ int rdbSaveBinaryDoubleValue(rio *rdb, double val);
 int rdbLoadBinaryDoubleValue(rio *rdb, double *val);
 int rdbSaveBinaryFloatValue(rio *rdb, float val);
 int rdbLoadBinaryFloatValue(rio *rdb, float *val);
+/**
+ * 通过 rio 加载 rdb 文件
+ *
+ * @param rdb
+ * @param rsi
+ * @param loading_aof
+ * @return
+ */
 int rdbLoadRio(rio *rdb, rdbSaveInfo *rsi, int loading_aof);
 rdbSaveInfo *rdbPopulateSaveInfo(rdbSaveInfo *rsi);
 
