@@ -769,7 +769,7 @@ void loadServerConfigFromString(char *config) {
         linenum = slaveof_linenum;
         i = linenum-1;
         err = "slaveof directive not allowed in cluster mode";
-        goto loaderr;queueMultiCommand
+        goto loaderr;
     }
     // 释放 lines，totlines 的内存
     sdsfreesplitres(lines,totlines);

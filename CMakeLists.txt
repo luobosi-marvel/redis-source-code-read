@@ -1,474 +1,124 @@
-cmake_minimum_required(VERSION 3.13)
-project(redis_source_code_read)
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+project(redis VERSION 4.0)
+set(CMAKE_BUILD_TYPE "Debug")
 
-set(CMAKE_CXX_STANDARD 14)
+get_filename_component(REDIS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" ABSOLUTE)
 
-include_directories(deps/hiredis)
-include_directories(deps/hiredis/adapters)
-include_directories(deps/hiredis/examples)
-include_directories(deps/jemalloc/include)
-include_directories(deps/jemalloc/include/jemalloc)
-include_directories(deps/jemalloc/include/jemalloc/internal)
-include_directories(deps/jemalloc/include/msvc_compat)
-include_directories(deps/jemalloc/include/msvc_compat/C99)
-include_directories(deps/jemalloc/msvc/test_threads)
-include_directories(deps/jemalloc/test/include)
-include_directories(deps/jemalloc/test/include/test)
-include_directories(deps/linenoise)
-include_directories(deps/lua/etc)
-include_directories(deps/lua/src)
-include_directories(src)
+add_subdirectory(deps)
+add_subdirectory(src/modules)
 
-add_executable(redis_source_code_read
-        deps/hiredis/adapters/ae.h
-        deps/hiredis/adapters/glib.h
-        deps/hiredis/adapters/ivykis.h
-        deps/hiredis/adapters/libev.h
-        deps/hiredis/adapters/libevent.h
-        deps/hiredis/adapters/libuv.h
-        deps/hiredis/adapters/macosx.h
-        deps/hiredis/adapters/qt.h
-        deps/hiredis/examples/example-ae.c
-        deps/hiredis/examples/example-glib.c
-        deps/hiredis/examples/example-ivykis.c
-        deps/hiredis/examples/example-libev.c
-        deps/hiredis/examples/example-libevent.c
-        deps/hiredis/examples/example-libuv.c
-        deps/hiredis/examples/example-macosx.c
-        deps/hiredis/examples/example-qt.cpp
-        deps/hiredis/examples/example-qt.h
-        deps/hiredis/examples/example.c
-        deps/hiredis/async.c
-        deps/hiredis/async.h
-        deps/hiredis/dict.c
-        deps/hiredis/dict.h
-        deps/hiredis/fmacros.h
-        deps/hiredis/hiredis.c
-        deps/hiredis/hiredis.h
-        deps/hiredis/net.c
-        deps/hiredis/net.h
-        deps/hiredis/read.c
-        deps/hiredis/read.h
-        deps/hiredis/sds.c
-        deps/hiredis/sds.h
-        deps/hiredis/sdsalloc.h
-        deps/hiredis/test.c
-        deps/hiredis/win32.h
-        deps/jemalloc/include/jemalloc/internal/arena_externs.h
-        deps/jemalloc/include/jemalloc/internal/arena_inlines_a.h
-        deps/jemalloc/include/jemalloc/internal/arena_inlines_b.h
-        deps/jemalloc/include/jemalloc/internal/arena_stats.h
-        deps/jemalloc/include/jemalloc/internal/arena_structs_a.h
-        deps/jemalloc/include/jemalloc/internal/arena_structs_b.h
-        deps/jemalloc/include/jemalloc/internal/arena_types.h
-        deps/jemalloc/include/jemalloc/internal/assert.h
-        deps/jemalloc/include/jemalloc/internal/atomic.h
-        deps/jemalloc/include/jemalloc/internal/atomic_c11.h
-        deps/jemalloc/include/jemalloc/internal/atomic_gcc_atomic.h
-        deps/jemalloc/include/jemalloc/internal/atomic_gcc_sync.h
-        deps/jemalloc/include/jemalloc/internal/atomic_msvc.h
-        deps/jemalloc/include/jemalloc/internal/background_thread_externs.h
-        deps/jemalloc/include/jemalloc/internal/background_thread_inlines.h
-        deps/jemalloc/include/jemalloc/internal/background_thread_structs.h
-        deps/jemalloc/include/jemalloc/internal/base_externs.h
-        deps/jemalloc/include/jemalloc/internal/base_inlines.h
-        deps/jemalloc/include/jemalloc/internal/base_structs.h
-        deps/jemalloc/include/jemalloc/internal/base_types.h
-        deps/jemalloc/include/jemalloc/internal/bin.h
-        deps/jemalloc/include/jemalloc/internal/bin_stats.h
-        deps/jemalloc/include/jemalloc/internal/bit_util.h
-        deps/jemalloc/include/jemalloc/internal/bitmap.h
-        deps/jemalloc/include/jemalloc/internal/cache_bin.h
-        deps/jemalloc/include/jemalloc/internal/ckh.h
-        deps/jemalloc/include/jemalloc/internal/ctl.h
-        deps/jemalloc/include/jemalloc/internal/div.h
-        deps/jemalloc/include/jemalloc/internal/emitter.h
-        deps/jemalloc/include/jemalloc/internal/extent_dss.h
-        deps/jemalloc/include/jemalloc/internal/extent_externs.h
-        deps/jemalloc/include/jemalloc/internal/extent_inlines.h
-        deps/jemalloc/include/jemalloc/internal/extent_mmap.h
-        deps/jemalloc/include/jemalloc/internal/extent_structs.h
-        deps/jemalloc/include/jemalloc/internal/extent_types.h
-        deps/jemalloc/include/jemalloc/internal/hash.h
-        deps/jemalloc/include/jemalloc/internal/hooks.h
-        deps/jemalloc/include/jemalloc/internal/jemalloc_internal_decls.h
-        deps/jemalloc/include/jemalloc/internal/jemalloc_internal_externs.h
-        deps/jemalloc/include/jemalloc/internal/jemalloc_internal_includes.h
-        deps/jemalloc/include/jemalloc/internal/jemalloc_internal_inlines_a.h
-        deps/jemalloc/include/jemalloc/internal/jemalloc_internal_inlines_b.h
-        deps/jemalloc/include/jemalloc/internal/jemalloc_internal_inlines_c.h
-        deps/jemalloc/include/jemalloc/internal/jemalloc_internal_macros.h
-        deps/jemalloc/include/jemalloc/internal/jemalloc_internal_types.h
-        deps/jemalloc/include/jemalloc/internal/large_externs.h
-        deps/jemalloc/include/jemalloc/internal/log.h
-        deps/jemalloc/include/jemalloc/internal/malloc_io.h
-        deps/jemalloc/include/jemalloc/internal/mutex.h
-        deps/jemalloc/include/jemalloc/internal/mutex_pool.h
-        deps/jemalloc/include/jemalloc/internal/mutex_prof.h
-        deps/jemalloc/include/jemalloc/internal/nstime.h
-        deps/jemalloc/include/jemalloc/internal/pages.h
-        deps/jemalloc/include/jemalloc/internal/ph.h
-        deps/jemalloc/include/jemalloc/internal/prng.h
-        deps/jemalloc/include/jemalloc/internal/prof_externs.h
-        deps/jemalloc/include/jemalloc/internal/prof_inlines_a.h
-        deps/jemalloc/include/jemalloc/internal/prof_inlines_b.h
-        deps/jemalloc/include/jemalloc/internal/prof_structs.h
-        deps/jemalloc/include/jemalloc/internal/prof_types.h
-        deps/jemalloc/include/jemalloc/internal/ql.h
-        deps/jemalloc/include/jemalloc/internal/qr.h
-        deps/jemalloc/include/jemalloc/internal/rb.h
-        deps/jemalloc/include/jemalloc/internal/rtree.h
-        deps/jemalloc/include/jemalloc/internal/rtree_tsd.h
-        deps/jemalloc/include/jemalloc/internal/smoothstep.h
-        deps/jemalloc/include/jemalloc/internal/spin.h
-        deps/jemalloc/include/jemalloc/internal/stats.h
-        deps/jemalloc/include/jemalloc/internal/sz.h
-        deps/jemalloc/include/jemalloc/internal/tcache_externs.h
-        deps/jemalloc/include/jemalloc/internal/tcache_inlines.h
-        deps/jemalloc/include/jemalloc/internal/tcache_structs.h
-        deps/jemalloc/include/jemalloc/internal/tcache_types.h
-        deps/jemalloc/include/jemalloc/internal/ticker.h
-        deps/jemalloc/include/jemalloc/internal/tsd.h
-        deps/jemalloc/include/jemalloc/internal/tsd_generic.h
-        deps/jemalloc/include/jemalloc/internal/tsd_malloc_thread_cleanup.h
-        deps/jemalloc/include/jemalloc/internal/tsd_tls.h
-        deps/jemalloc/include/jemalloc/internal/tsd_types.h
-        deps/jemalloc/include/jemalloc/internal/tsd_win.h
-        deps/jemalloc/include/jemalloc/internal/util.h
-        deps/jemalloc/include/jemalloc/internal/witness.h
-        deps/jemalloc/include/msvc_compat/C99/stdbool.h
-        deps/jemalloc/include/msvc_compat/C99/stdint.h
-        deps/jemalloc/include/msvc_compat/strings.h
-        deps/jemalloc/include/msvc_compat/windows_extra.h
-        deps/jemalloc/msvc/test_threads/test_threads.cpp
-        deps/jemalloc/msvc/test_threads/test_threads.h
-        deps/jemalloc/msvc/test_threads/test_threads_main.cpp
-        deps/jemalloc/src/arena.c
-        deps/jemalloc/src/background_thread.c
-        deps/jemalloc/src/base.c
-        deps/jemalloc/src/bin.c
-        deps/jemalloc/src/bitmap.c
-        deps/jemalloc/src/ckh.c
-        deps/jemalloc/src/ctl.c
-        deps/jemalloc/src/div.c
-        deps/jemalloc/src/extent.c
-        deps/jemalloc/src/extent_dss.c
-        deps/jemalloc/src/extent_mmap.c
-        deps/jemalloc/src/hash.c
-        deps/jemalloc/src/hooks.c
-        deps/jemalloc/src/jemalloc.c
-        deps/jemalloc/src/jemalloc_cpp.cpp
-        deps/jemalloc/src/large.c
-        deps/jemalloc/src/log.c
-        deps/jemalloc/src/malloc_io.c
-        deps/jemalloc/src/mutex.c
-        deps/jemalloc/src/mutex_pool.c
-        deps/jemalloc/src/nstime.c
-        deps/jemalloc/src/pages.c
-        deps/jemalloc/src/prng.c
-        deps/jemalloc/src/prof.c
-        deps/jemalloc/src/rtree.c
-        deps/jemalloc/src/stats.c
-        deps/jemalloc/src/sz.c
-        deps/jemalloc/src/tcache.c
-        deps/jemalloc/src/ticker.c
-        deps/jemalloc/src/tsd.c
-        deps/jemalloc/src/witness.c
-        deps/jemalloc/src/zone.c
-        deps/jemalloc/test/include/test/btalloc.h
-        deps/jemalloc/test/include/test/extent_hooks.h
-        deps/jemalloc/test/include/test/math.h
-        deps/jemalloc/test/include/test/mq.h
-        deps/jemalloc/test/include/test/mtx.h
-        deps/jemalloc/test/include/test/SFMT-alti.h
-        deps/jemalloc/test/include/test/SFMT-params.h
-        deps/jemalloc/test/include/test/SFMT-params11213.h
-        deps/jemalloc/test/include/test/SFMT-params1279.h
-        deps/jemalloc/test/include/test/SFMT-params132049.h
-        deps/jemalloc/test/include/test/SFMT-params19937.h
-        deps/jemalloc/test/include/test/SFMT-params216091.h
-        deps/jemalloc/test/include/test/SFMT-params2281.h
-        deps/jemalloc/test/include/test/SFMT-params4253.h
-        deps/jemalloc/test/include/test/SFMT-params44497.h
-        deps/jemalloc/test/include/test/SFMT-params607.h
-        deps/jemalloc/test/include/test/SFMT-params86243.h
-        deps/jemalloc/test/include/test/SFMT-sse2.h
-        deps/jemalloc/test/include/test/SFMT.h
-        deps/jemalloc/test/include/test/test.h
-        deps/jemalloc/test/include/test/thd.h
-        deps/jemalloc/test/include/test/timer.h
-        deps/jemalloc/test/integration/aligned_alloc.c
-        deps/jemalloc/test/integration/allocated.c
-        deps/jemalloc/test/integration/extent.c
-        deps/jemalloc/test/integration/mallocx.c
-        deps/jemalloc/test/integration/MALLOCX_ARENA.c
-        deps/jemalloc/test/integration/overflow.c
-        deps/jemalloc/test/integration/posix_memalign.c
-        deps/jemalloc/test/integration/rallocx.c
-        deps/jemalloc/test/integration/sdallocx.c
-        deps/jemalloc/test/integration/thread_arena.c
-        deps/jemalloc/test/integration/thread_tcache_enabled.c
-        deps/jemalloc/test/integration/xallocx.c
-        deps/jemalloc/test/src/btalloc.c
-        deps/jemalloc/test/src/btalloc_0.c
-        deps/jemalloc/test/src/btalloc_1.c
-        deps/jemalloc/test/src/math.c
-        deps/jemalloc/test/src/mq.c
-        deps/jemalloc/test/src/mtx.c
-        deps/jemalloc/test/src/SFMT.c
-        deps/jemalloc/test/src/test.c
-        deps/jemalloc/test/src/thd.c
-        deps/jemalloc/test/src/timer.c
-        deps/jemalloc/test/stress/microbench.c
-        deps/jemalloc/test/unit/a0.c
-        deps/jemalloc/test/unit/arena_reset.c
-        deps/jemalloc/test/unit/arena_reset_prof.c
-        deps/jemalloc/test/unit/atomic.c
-        deps/jemalloc/test/unit/background_thread.c
-        deps/jemalloc/test/unit/background_thread_enable.c
-        deps/jemalloc/test/unit/base.c
-        deps/jemalloc/test/unit/bit_util.c
-        deps/jemalloc/test/unit/bitmap.c
-        deps/jemalloc/test/unit/ckh.c
-        deps/jemalloc/test/unit/decay.c
-        deps/jemalloc/test/unit/div.c
-        deps/jemalloc/test/unit/emitter.c
-        deps/jemalloc/test/unit/extent_quantize.c
-        deps/jemalloc/test/unit/fork.c
-        deps/jemalloc/test/unit/hash.c
-        deps/jemalloc/test/unit/hooks.c
-        deps/jemalloc/test/unit/junk.c
-        deps/jemalloc/test/unit/junk_alloc.c
-        deps/jemalloc/test/unit/junk_free.c
-        deps/jemalloc/test/unit/log.c
-        deps/jemalloc/test/unit/mallctl.c
-        deps/jemalloc/test/unit/malloc_io.c
-        deps/jemalloc/test/unit/math.c
-        deps/jemalloc/test/unit/mq.c
-        deps/jemalloc/test/unit/mtx.c
-        deps/jemalloc/test/unit/nstime.c
-        deps/jemalloc/test/unit/pack.c
-        deps/jemalloc/test/unit/pages.c
-        deps/jemalloc/test/unit/ph.c
-        deps/jemalloc/test/unit/prng.c
-        deps/jemalloc/test/unit/prof_accum.c
-        deps/jemalloc/test/unit/prof_active.c
-        deps/jemalloc/test/unit/prof_gdump.c
-        deps/jemalloc/test/unit/prof_idump.c
-        deps/jemalloc/test/unit/prof_reset.c
-        deps/jemalloc/test/unit/prof_tctx.c
-        deps/jemalloc/test/unit/prof_thread_name.c
-        deps/jemalloc/test/unit/ql.c
-        deps/jemalloc/test/unit/qr.c
-        deps/jemalloc/test/unit/rb.c
-        deps/jemalloc/test/unit/retained.c
-        deps/jemalloc/test/unit/rtree.c
-        deps/jemalloc/test/unit/SFMT.c
-        deps/jemalloc/test/unit/size_classes.c
-        deps/jemalloc/test/unit/slab.c
-        deps/jemalloc/test/unit/smoothstep.c
-        deps/jemalloc/test/unit/spin.c
-        deps/jemalloc/test/unit/stats.c
-        deps/jemalloc/test/unit/stats_print.c
-        deps/jemalloc/test/unit/ticker.c
-        deps/jemalloc/test/unit/tsd.c
-        deps/jemalloc/test/unit/witness.c
-        deps/jemalloc/test/unit/zero.c
-        deps/linenoise/example.c
-        deps/linenoise/linenoise.c
-        deps/linenoise/linenoise.h
-        deps/lua/etc/all.c
-        deps/lua/etc/lua.hpp
-        deps/lua/etc/min.c
-        deps/lua/etc/noparser.c
-        deps/lua/src/fpconv.c
-        deps/lua/src/fpconv.h
-        deps/lua/src/lapi.c
-        deps/lua/src/lapi.h
-        deps/lua/src/lauxlib.c
-        deps/lua/src/lauxlib.h
-        deps/lua/src/lbaselib.c
-        deps/lua/src/lcode.c
-        deps/lua/src/lcode.h
-        deps/lua/src/ldblib.c
-        deps/lua/src/ldebug.c
-        deps/lua/src/ldebug.h
-        deps/lua/src/ldo.c
-        deps/lua/src/ldo.h
-        deps/lua/src/ldump.c
-        deps/lua/src/lfunc.c
-        deps/lua/src/lfunc.h
-        deps/lua/src/lgc.c
-        deps/lua/src/lgc.h
-        deps/lua/src/linit.c
-        deps/lua/src/liolib.c
-        deps/lua/src/llex.c
-        deps/lua/src/llex.h
-        deps/lua/src/llimits.h
-        deps/lua/src/lmathlib.c
-        deps/lua/src/lmem.c
-        deps/lua/src/lmem.h
-        deps/lua/src/loadlib.c
-        deps/lua/src/lobject.c
-        deps/lua/src/lobject.h
-        deps/lua/src/lopcodes.c
-        deps/lua/src/lopcodes.h
-        deps/lua/src/loslib.c
-        deps/lua/src/lparser.c
-        deps/lua/src/lparser.h
-        deps/lua/src/lstate.c
-        deps/lua/src/lstate.h
-        deps/lua/src/lstring.c
-        deps/lua/src/lstring.h
-        deps/lua/src/lstrlib.c
-        deps/lua/src/ltable.c
-        deps/lua/src/ltable.h
-        deps/lua/src/ltablib.c
-        deps/lua/src/ltm.c
-        deps/lua/src/ltm.h
-        deps/lua/src/lua.c
-        deps/lua/src/lua.h
-        deps/lua/src/lua_bit.c
-        deps/lua/src/lua_cjson.c
-        deps/lua/src/lua_cmsgpack.c
-        deps/lua/src/lua_struct.c
-        deps/lua/src/luac.c
-        deps/lua/src/luaconf.h
-        deps/lua/src/lualib.h
-        deps/lua/src/lundump.c
-        deps/lua/src/lundump.h
-        deps/lua/src/lvm.c
-        deps/lua/src/lvm.h
-        deps/lua/src/lzio.c
-        deps/lua/src/lzio.h
-        deps/lua/src/print.c
-        deps/lua/src/strbuf.c
-        deps/lua/src/strbuf.h
-        src/modules/helloblock.c
-        src/modules/hellocluster.c
-        src/modules/hellotimer.c
-        src/modules/hellotype.c
-        src/modules/helloworld.c
-        src/modules/testmodule.c
+set(SRC_SERVER_TMP
         src/adlist.c
-        src/adlist.h
         src/ae.c
-        src/ae.h
-        src/ae_epoll.c
-        src/ae_evport.c
-        src/ae_kqueue.c
-        src/ae_select.c
         src/anet.c
-        src/anet.h
-        src/aof.c
-        src/asciilogo.h
-        src/atomicvar.h
-        src/bio.c
-        src/bio.h
-        src/bitops.c
-        src/blocked.c
-        src/childinfo.c
-        src/cluster.c
-        src/cluster.h
-        src/config.c
-        src/config.h
-        src/crc16.c
-        src/crc64.c
-        src/crc64.h
-        src/db.c
-        src/debug.c
-        src/debugmacro.h
-        src/defrag.c
+        src/ae_kqueue.c
         src/dict.c
-        src/dict.h
-        src/endianconv.c
-        src/endianconv.h
-        src/evict.c
-        src/expire.c
-        src/fmacros.h
-        src/geo.c
-        src/geo.h
-        src/geohash.c
-        src/geohash.h
-        src/geohash_helper.c
-        src/geohash_helper.h
-        src/help.h
-        src/hyperloglog.c
-        src/intset.c
-        src/intset.h
-        src/latency.c
-        src/latency.h
-        src/lazyfree.c
-        src/listpack.c
-        src/listpack.h
-        src/listpack_malloc.h
-        src/lzf.h
+        src/sds.c
+        src/zmalloc.c
         src/lzf_c.c
         src/lzf_d.c
-        src/lzfP.h
-        src/memtest.c
-        src/module.c
-        src/multi.c
-        src/networking.c
-        src/notify.c
-        src/object.c
         src/pqsort.c
-        src/pqsort.h
-        src/pubsub.c
-        src/quicklist.c
-        src/quicklist.h
-        src/rand.c
-        src/rand.h
-        src/rax.c
-        src/rax.h
-        src/rax_malloc.h
-        src/rdb.c
-        src/rdb.h
-        src/redis-benchmark.c
-        src/redis-check-aof.c
-        src/redis-check-rdb.c
-        src/redis-cli.c
-        src/redisassert.h
-        src/redismodule.h
-        src/release.c
-        src/replication.c
-        src/rio.c
-        src/rio.h
-        src/scripting.c
-        src/sds.c
-        src/sds.h
-        src/sdsalloc.h
-        src/sentinel.c
-        src/server.c
-        src/server.h
-        src/setproctitle.c
+        src/zipmap.c
         src/sha1.c
-        src/sha1.h
-        src/siphash.c
-        src/slowlog.c
-        src/slowlog.h
-        src/solarisfixes.h
-        src/sort.c
-        src/sparkline.c
-        src/sparkline.h
-        src/stream.h
-        src/syncio.c
-        src/t_hash.c
+        src/ziplist.c
+        src/release.c
+        src/networking.c
+        src/util.c
+        src/object.c
+        src/db.c
+        src/replication.c
+        src/rdb.c
+        src/t_string.c
         src/t_list.c
         src/t_set.c
-        src/t_stream.c
-        src/t_string.c
         src/t_zset.c
-        src/testhelp.h
-        src/util.c
-        src/util.h
-        src/version.h
-        src/ziplist.c
-        src/ziplist.h
-        src/zipmap.c
-        src/zipmap.h
+        src/evict.c
+        src/defrag.c
+        src/module.c
+        src/quicklist.c
+        src/expire.c
+        src/childinfo.c
+        src/redis-check-aof.c
+        src/redis-check-rdb.c
+        src/lazyfree.c
+        src/geohash.c
+        src/rax.c
+        src/geohash_helper.c
+        src/siphash.c
+        src/geo.c
+        src/t_hash.c
+        src/config.c
+        src/aof.c
+        src/pubsub.c
+        src/multi.c
+        src/debug.c
+        src/sort.c
+        src/intset.c
+        src/syncio.c
+        src/cluster.c
+        src/crc16.c
+        src/endianconv.c
+        src/slowlog.c
+        src/scripting.c
+        src/bio.c
+        src/rio.c
+        src/rand.c
+        src/memtest.c
+        src/crc64.c
+        src/bitops.c
+        src/sentinel.c
+        src/notify.c
+        src/setproctitle.c
+        src/blocked.c
+        src/hyperloglog.c
+        src/latency.c
+        src/sparkline.c
+        src/t_stream.c
+#        src/lolwut.c
+#        src/lolwut5.c
+        src/listpack.c
+#        src/localtime.c
+        )
+set(SRC_SERVER src/server.c ${SRC_SERVER_TMP})
+
+set(SRC_CLI
+        src/anet.c
+        src/sds.c
+        src/adlist.c
+        src/redis-cli.c
         src/zmalloc.c
-        src/zmalloc.h
-        utils/hashtable/rehashing.c
-        utils/lru/lfu-simulation.c
-        utils/corrupt_rdb.c)
+        src/release.c
+        src/anet.c
+        src/ae.c
+        src/crc64.c
+        )
+
+
+set(EXECUTABLE_OUTPUT_PATH src)
+link_directories(deps/linenoise/ deps/lua/src deps/hiredis)
+
+add_executable(redis-server ${SRC_SERVER})
+target_include_directories(redis-server
+        PRIVATE ${REDIS_ROOT}/deps/linenoise
+        PRIVATE ${REDIS_ROOT}/deps/hiredis
+        PRIVATE ${REDIS_ROOT}/deps/lua/src)
+target_link_libraries(redis-server
+        PRIVATE pthread
+        PRIVATE m
+        PRIVATE lua
+        PRIVATE linenoise
+        PRIVATE hiredis)
+
+
+add_executable(redis-cli ${SRC_CLI})
+target_include_directories(redis-cli
+        PRIVATE ${REDIS_ROOT}/deps/linenoise
+        PRIVATE ${REDIS_ROOT}/deps/hiredis
+        PRIVATE ${REDIS_ROOT}/deps/lua/src)
+
+target_link_libraries(redis-cli
+        PRIVATE pthread
+        PRIVATE m
+        PRIVATE linenoise
+        PRIVATE hiredis
+        )

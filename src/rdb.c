@@ -1251,7 +1251,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
     }
 
     // TODO: 这个方法不知道要干嘛？
-    rioInitWithFilerioInitWithFile(&rdb,fp);
+    // rioInitWithFilerioInitWithFile(&rdb,fp);
 
     // rdb 保存是否逐步增加 fsync
     if (server.rdb_save_incremental_fsync)

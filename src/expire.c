@@ -118,7 +118,6 @@ void activeExpireCycle(int type) {
     if (clientsArePaused()) return;
 
     if (type == ACTIVE_EXPIRE_CYCLE_FAST) {
-        activeExpireCycle
         /* Don't start a fast cycle if the previous cycle did not exit
          * for time limt. Also don't repeat a fast cycle for the same period
          * as the fast cycle total duration itself. */
