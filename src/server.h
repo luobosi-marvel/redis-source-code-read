@@ -299,14 +299,18 @@ typedef long long mstime_t; /* millisecond time type. */
 #define REPL_STATE_SEND_PSYNC 12 /* Send PSYNC */
 #define REPL_STATE_RECEIVE_PSYNC 13 /* Wait for PSYNC reply */
 /* --- End of handshake states --- */
+// 接收 master 的 .rdb 文件
 #define REPL_STATE_TRANSFER 14 /* Receiving .rdb from master */
+// 已经连接上了 master
 #define REPL_STATE_CONNECTED 15 /* Connected to master */
 
 /* State of slaves from the POV of the master. Used in client->replstate.
  * In SEND_BULK and ONLINE state the slave receives new updates
  * in its output queue. In the WAIT_BGSAVE states instead the server is waiting
  * to start the next background saving in order to send updates to it. */
+// 我们需要生成一个新的 rdb 文件
 #define SLAVE_STATE_WAIT_BGSAVE_START 6 /* We need to produce a new RDB file. */
+// 等待 rdb 文件创建完成
 #define SLAVE_STATE_WAIT_BGSAVE_END 7 /* Waiting RDB file creation to finish. */
 #define SLAVE_STATE_SEND_BULK 8 /* Sending RDB file to slave. */
 #define SLAVE_STATE_ONLINE 9 /* RDB file transmitted, sending just updates. */
@@ -1274,6 +1278,9 @@ struct redisServer {
     long long master_repl_offset;   /* My current replication offset */
     long long second_replid_offset; /* Accept offsets up to this for replid2. */
     int slaveseldb;                 /* Last SELECTed DB in replication output */
+    /**
+     * TODO：ping 主节点每隔 n 秒对从节点发送一次 ping 命令
+     */
     int repl_ping_slave_period;     /* Master pings the slave every N seconds */
     char *repl_backlog;             /* Replication backlog for partial syncs */
     long long repl_backlog_size;    /* Backlog circular buffer size */

@@ -1126,6 +1126,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
                           (int) server.rdb_child_pid,
                           (int) server.aof_child_pid);
             } else if (pid == server.rdb_child_pid) {
+                // TODO: 主从复制：落盘和无盘复制的选择
                 backgroundSaveDoneHandler(exitcode, bysignal);
                 if (!bysignal && exitcode == 0) receiveChildInfo();
             } else if (pid == server.aof_child_pid) {
@@ -1185,9 +1186,11 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
             server.aof_rewrite_perc &&
             // 当前 aof 文件大小一定要大于 aof_rewrite_min_size 大小才会触发 AOF 重写
             server.aof_current_size > server.aof_rewrite_min_size) {
+
             long long base = server.aof_rewrite_base_size ?
                              server.aof_rewrite_base_size : 1;
             long long growth = (server.aof_current_size * 100 / base) - 100;
+
             if (growth >= server.aof_rewrite_perc) {
                 serverLog(LL_NOTICE, "Starting automatic rewriting of AOF on %lld%% growth", growth);
                 // AOF 文件重写
@@ -1225,10 +1228,11 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     /*
      * Replication cron function -- used to reconnect to master,
      * detect transfer failures, start background RDB transfers and so forth.
+     * TODO：主从复制：服务启动的时候
      * 复制cron函数 - 用于重新连接到master，
       *检测传输失败，启动后台RDB传输等。
      */
-    run_with_period(1000) replicationCron();
+    run_with_period(1000) { replicationCron(); }
 
     /* Run the Redis Cluster cron. */
     // todo: 每隔 100ms 执行 clusterCron() 函数
@@ -2081,8 +2085,12 @@ void initServer(void) {
         serverPanic("Unrecoverable error creating server.sofd file event.");
 
 
-    /* Register a readable event for the pipe used to awake the event loop
-     * when a blocked client in a module needs attention. */
+    /*
+     * 创建一个文件事件
+     *
+     * Register a readable event for the pipe used to awake the event loop
+     * when a blocked client in a module needs attention.
+     */
     if (aeCreateFileEvent(server.el, server.module_blocked_pipe[0], AE_READABLE,
                           moduleBlockedClientPipeReadable, NULL) == AE_ERR) {
         serverPanic(
@@ -2113,8 +2121,10 @@ void initServer(void) {
     }
     // todo: 初始化 server.cluster
     if (server.cluster_enabled) clusterInit();
+
     replicationScriptCacheInit();
     scriptingInit(1);
+    // todo: slowlog 初始化
     slowlogInit();
     latencyMonitorInit();
     // todo: aof 后台线程初始化
@@ -2591,6 +2601,7 @@ int processCommand(client *c) {
     }
 
     /*
+     * TODO：内存优化
      * Redis 每服务客户端执行一个命令的时候，会检测使用的内存是否超额。如果超额，即进行数据淘汰。
      * 首先我们尝试释放一些内存（如果有的话）数据集中的键）。
      */
@@ -2618,6 +2629,7 @@ int processCommand(client *c) {
      * Don't accept write commands if there are problems persisting on disk
      * and if this is a master instance.
      *
+     * TODO：问题：磁盘出现问题
      * 如果磁盘上存在问题，请不要接受写入命令如果这是一个主实例。
      */
     if (((server.stop_writes_on_bgsave_err &&
@@ -2643,6 +2655,7 @@ int processCommand(client *c) {
      * Don't accept write commands if there are not enough good slaves and
      * user configured the min-slaves-to-write option.
      *
+     * TODO：主从复制 如果没有 slave < min-slaves-to-write,则不支持写操作
      * 当用户配置了min-slaves-to-write选项，如果没有足够的健康的 slave 机器，请不要接受写命令
      */
     if (server.masterhost == NULL &&
@@ -2659,7 +2672,7 @@ int processCommand(client *c) {
      * Don't accept write commands if this is a read only slave. But
      * accept write commands if this is our master.
      *
-     * 如果这是一个只读的 slave ，则不接受写命令。 但如果这是 master，接受写命令。
+     * TODO：主从 如果这是一个只读的 slave ，则不接受写命令。 但如果这是 master，接受写命令。
      */
     if (server.masterhost && server.repl_slave_ro &&
         !(c->flags & CLIENT_MASTER) &&

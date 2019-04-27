@@ -57,7 +57,7 @@ typedef struct clusterLink {
 /* Cluster node flags and macros. 群集节点标志和宏。 */
 #define CLUSTER_NODE_MASTER 1     /* The node is a master */
 #define CLUSTER_NODE_SLAVE 2      /* The node is a slave */
-#define CLUSTER_NODE_PFAIL 4      /* 主管下线状态 */
+#define CLUSTER_NODE_PFAIL 4      /* 主观下线状态 */
 #define CLUSTER_NODE_FAIL 8       /* 客观下线状态 */
 #define CLUSTER_NODE_MYSELF 16    /* 标识自身节点 */
 #define CLUSTER_NODE_HANDSHAKE 32 /* 握手状态，未与其他节点进行消息通信 */
@@ -110,7 +110,15 @@ typedef struct clusterLink {
 
 /* This structure represent elements of node->fail_reports. */
 typedef struct clusterNodeFailReport {
+    /**
+     * 报告目标节点已经下线的节点
+     */
     struct clusterNode *node;  /* Node reporting the failure condition. */
+    /**
+     * 最后一次从 node 节点收到下线报告的时间
+     * 程序使用这个时间戳来检测下线报告是否过期
+     * （与当前时间相差太久的下线报告会被删除）
+     */
     mstime_t time;             /* Time of the last report from this node. */
 } clusterNodeFailReport;
 
@@ -126,40 +134,89 @@ typedef struct clusterNodeFailReport {
  * 记录节点的槽指派信息
  */
 typedef struct clusterNode {
+    // 节点创建的时间
     mstime_t ctime; /* Node object creation time. */
+    /**
+     * 节点的名字,由 40个十六进制字符组成
+     */
     char name[CLUSTER_NAMELEN]; /* Node name, hex string, sha1-size */
+    /**
+     * 节点标识
+     * 使用各种不同的标识值记录节点的角色(比如主节点或者从节点)
+     * 以及节点目前所处的状态(比如在线或者下线)
+     */
     int flags;      /* CLUSTER_NODE_... */
     uint64_t configEpoch; /* Last configEpoch observed for this node */
+
     // slots 是一个二进制位数组，长度为 16384/8=2048 bit。共包含 16384 个二进制位
     // 如果 slots 数组在索引 i 上的二进制位的值为 1，则表示该节点负责处理槽i
+    /**
+     * 取出和设置 slots 数组中的任意一个二进制位的值得复杂度都是 O(1)
+     */
     unsigned char slots[CLUSTER_SLOTS/8]; /* slots handled by this node */
+    /**
+     * 该节点处理 slot 的个数
+     */
     int numslots;   /* Number of slots handled by this node */
-    // 如果这是 master，则记录了 slaves 的数量
+    /**
+     * 如果这是 master，则记录了 slaves 的数量
+     */
     int numslaves;  /* Number of slave nodes, if this is a master */
+    /**
+     * 指向从节点的链表
+     */
     struct clusterNode **slaves; /* pointers to slave nodes */
     struct clusterNode *slaveof; /* pointer to the master node. Note that it
                                     may be NULL even if the node is a slave
                                     if we don't have the master node in our
                                     tables. */
+    // ping 命令发送的时间
     mstime_t ping_sent;      /* Unix time we sent latest ping */
     mstime_t pong_received;  /* Unix time we received the pong */
+    // fail消息 发送的时间
     mstime_t fail_time;      /* Unix time when FAIL flag was set */
+    // 发起投票的时间
     mstime_t voted_time;     /* Last time we voted for a slave of this master */
     mstime_t repl_offset_time;  /* Unix time we received offset for this node */
     mstime_t orphaned_time;     /* Starting time of orphaned master condition */
     long long repl_offset;      /* Last known repl offset for this node. */
+    /**
+     * 节点的ip 地址
+     */
     char ip[NET_IP_STR_LEN];  /* Latest known IP address of this node */
+    /**
+     * 节点端口号
+     */
     int port;                   /* Latest known clients port of this node */
     int cport;                  /* Latest known cluster port of this node. */
+    /**
+     * 保存连接节点所需要的有关信息
+     */
     clusterLink *link;          /* TCP/IP link with this node */
     list *fail_reports;         /* List of nodes signaling this as failing */
 } clusterNode;
 
 typedef struct clusterState {
+    /**
+     * 指向当前节点的指针
+     */
     clusterNode *myself;  /* This node */
+    /**
+     * 集群当前的配置纪元,用于实现故障转移
+     */
     uint64_t currentEpoch;
+    /**
+     * 集群当前的状态:是在线还是下线
+     */
     int state;            /* CLUSTER_OK, CLUSTER_FAIL, ... */
+    /**
+     * 集群中至少处理着一个槽的节点的数量
+     */
     int size;             /* Num of master nodes with at least one slot */
+    /**
+     * 集群节点名单(包括 myself 节点)
+     * 字典的键为节点的名字,字典的值为节点对应的 clusterNode 结构
+     */
     dict *nodes;          /* Hash table of name -> clusterNode structures */
     dict *nodes_black_list; /* Nodes we don't re-add for a few seconds. */
     /*
@@ -171,6 +228,11 @@ typedef struct clusterState {
     clusterNode *migrating_slots_to[CLUSTER_SLOTS];
     // 记录了当前节点正在从其它节点导入的槽
     clusterNode *importing_slots_from[CLUSTER_SLOTS];
+    /**
+     * slots 数组记录了集群中所有 16384 个槽的指派信息
+     * 每个数组项都指向了 clusterNode 结构的指针：
+     * 如果 slots[i] 指针指向了 null，那么标识该槽未指派给任何节点。
+     */
     clusterNode *slots[CLUSTER_SLOTS];
     uint64_t slots_keys_count[CLUSTER_SLOTS];
     rax *slots_to_keys;
@@ -273,11 +335,15 @@ union clusterMsgData {
         clusterMsgDataGossip gossip[1];
     } ping;
 
+
     /* FAIL */
     struct {
         clusterMsgDataFail about;
     } fail;
 
+    /**
+     *
+     */
     /* PUBLISH */
     struct {
         clusterMsgDataPublish msg;

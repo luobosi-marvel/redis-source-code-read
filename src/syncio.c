@@ -42,10 +42,12 @@
 
 #define SYNCIO__RESOLUTION 10 /* Resolution in milliseconds */
 
-/* Write the specified payload to 'fd'. If writing the whole payload will be
+/*
+ * Write the specified payload to 'fd'. If writing the whole payload will be
  * done within 'timeout' milliseconds the operation succeeds and 'size' is
  * returned. Otherwise the operation fails, -1 is returned, and an unspecified
- * partial write could be performed against the file descriptor. */
+ * partial write could be performed against the file descriptor.
+ */
 ssize_t syncWrite(int fd, char *ptr, ssize_t size, long long timeout) {
     ssize_t nwritten, ret = size;
     long long start = mstime();
